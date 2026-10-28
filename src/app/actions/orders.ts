@@ -1,11 +1,20 @@
 "use server";
 
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
-import { requiresOnlinePaymentVerification } from "@/lib/paymentMethods";
+import {
+  isCheckoutPaymentMethodAllowed,
+  isValidUtr,
+  normalizeUtr,
+  requiresOnlinePaymentVerification,
+} from "@/lib/paymentMethods";
 import type {
   CancelOrderResult,
+  PaymentVerificationListResult,
+  PaymentVerificationSummary,
   PlaceOrderInput,
   PlaceOrderResult,
+  SubmitPaymentVerificationInput,
+  SubmitPaymentVerificationResult,
 } from "@/lib/orderTypes";
 
 /**
@@ -31,7 +40,33 @@ function safeOrderError(message: string): string {
   if (m.includes("empty_cart") || m.includes("invalid_item"))
     return "Your cart is invalid. Please review it and try again.";
   if (m.includes("unauthenticated")) return "You must be logged in.";
+  if (m.includes("online_payment_verification_required"))
+    return "Online payment orders must be submitted with a UTR reference for verification at checkout.";
+  if (m.includes("upi_only") || m.includes("method_not_allowed"))
+    return "UPI is the only payment method available at checkout.";
   return "Unable to place order. Please try again.";
+}
+
+/** Map `submit_payment_verification` messages to safe customer messages. */
+function safeVerificationError(message: string): string {
+  const m = (message ?? "").toLowerCase();
+  if (m.includes("invalid_utr"))
+    return "Enter a valid UTR / transaction reference number (6-30 letters or digits).";
+  if (m.includes("duplicate_utr"))
+    return "This reference number is already linked to another payment.";
+  if (m.includes("already_pending"))
+    return "You already have a payment reference awaiting verification. Please wait for it to be reviewed.";
+  if (m.includes("not_required"))
+    return "Cash on Delivery does not require a UTR number.";
+  if (m.includes("upi_only") || m.includes("method_not_allowed"))
+    return "UPI is the only payment method available at checkout.";
+  if (m.includes("coupon_not_allowed"))
+    return "Coupon codes are not accepted at checkout.";
+  if (m.includes("blocked"))
+    return "Your account is blocked. Please contact support.";
+  if (m.includes("could not find the function") || m.includes("schema cache") || m.includes("pgrst202"))
+    return "Payment verification is not available yet. Please try again later.";
+  return safeOrderError(message);
 }
 
 export async function placeOrderSecure(input: PlaceOrderInput): Promise<PlaceOrderResult> {
@@ -61,6 +96,36 @@ export async function placeOrderSecure(input: PlaceOrderInput): Promise<PlaceOrd
 
     if (items.length === 0) {
       return { success: false, error: "Your cart is invalid. Please review it and try again." };
+    }
+
+    // Checkout is UPI-only: card, net banking and Cash on Delivery were removed
+    // from the storefront, so a request naming them must fail here as well. The
+    // database applies the same allowlist to every new order (`upi_only`).
+    if (!isCheckoutPaymentMethodAllowed(input.paymentMethod)) {
+      return {
+        success: false,
+        error: "UPI is the only payment method available at checkout.",
+      };
+    }
+
+    // The coupon section was removed from checkout, so no code may be sent —
+    // totals must match exactly what the customer saw on the checkout page.
+    if (input.coupon && input.coupon.trim()) {
+      return { success: false, error: "Coupon codes are not accepted at checkout." };
+    }
+
+    // Online payments can ONLY enter the system as a pending payment
+    // verification (UTR first, admin approval second). Directly calling this
+    // action with an online method — or with a forged payload — must not create
+    // a placed order. The database enforces the same rule independently
+    // (`online_payment_verification_required` inside create_order's insert
+    // guard), so neither layer alone can be bypassed.
+    if (requiresOnlinePaymentVerification(input.paymentMethod)) {
+      return {
+        success: false,
+        error:
+          "Online payment orders must be submitted with a UTR reference for verification at checkout.",
+      };
     }
 
     const { data, error } = await supabase.rpc("create_order", {
@@ -178,6 +243,171 @@ export async function submitOrderPaymentUtr(
   } catch (err) {
     console.error("submitOrderPaymentUtr error:", err);
     return { success: false, error: "Unable to submit payment reference. Please try again." };
+  }
+}
+
+/**
+ * Submit an online checkout WITH its UTR reference for admin verification.
+ *
+ * This is the ONLY way an online-payment order can come into existence: it
+ * creates a `payment_verifications` row in `pending` state and does NOT create
+ * an order, does NOT mark anything as paid and does NOT clear any confirmation
+ * message — the admin's approval (approve_payment_verification) is what
+ * places the order, exactly once.
+ *
+ * Prices, variants, stock, totals, UTR validity and duplicate detection are
+ * all re-derived on the server; the browser only supplies identifiers, the
+ * address, the method label and the reference string.
+ */
+export async function submitPaymentVerification(
+  input: SubmitPaymentVerificationInput
+): Promise<SubmitPaymentVerificationResult> {
+  try {
+    if (!input?.items?.length) {
+      return { success: false, error: "Your cart is empty." };
+    }
+    if (input.acknowledged !== true) {
+      return {
+        success: false,
+        error: "Please confirm that you completed the payment and entered your UTR number.",
+      };
+    }
+    const utr = normalizeUtr(input.utr);
+    if (!isValidUtr(utr)) {
+      return {
+        success: false,
+        error: "Enter a valid UTR / transaction reference number (6-30 letters or digits).",
+      };
+    }
+    // UPI only — card / net banking / COD submissions are refused server-side,
+    // exactly like the checkout UI that no longer offers them.
+    if (!isCheckoutPaymentMethodAllowed(input.paymentMethod)) {
+      return {
+        success: false,
+        error: "UPI is the only payment method available at checkout.",
+      };
+    }
+    // Checkout has no coupon section, so a submitted code would make the stored
+    // total disagree with the total the customer acknowledged.
+    if (input.coupon && input.coupon.trim()) {
+      return { success: false, error: "Coupon codes are not accepted at checkout." };
+    }
+
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "You must be logged in." };
+    }
+
+    const items = input.items
+      .filter((i) => i && i.productId && Number(i.qty) > 0)
+      .map((i) => ({
+        product_id: i.productId,
+        quantity: Math.floor(Number(i.qty)),
+        color: i.color ?? null,
+        size: i.size ?? null,
+      }));
+
+    if (items.length === 0) {
+      return { success: false, error: "Your cart is invalid. Please review it and try again." };
+    }
+
+    const { data, error } = await supabase.rpc("submit_payment_verification", {
+      p_items: items,
+      p_shipping: input.shipping,
+      p_payment_method: input.paymentMethod,
+      p_coupon: input.coupon && input.coupon.trim() ? input.coupon.trim() : null,
+      p_utr: utr,
+    });
+
+    if (error) {
+      // Technical detail stays on the server.
+      console.error("submit_payment_verification failed:", error.message);
+      return { success: false, error: safeVerificationError(error.message) };
+    }
+
+    const result = (data ?? {}) as { success?: boolean; verification_id?: string; total?: number };
+    if (result.success !== true || !result.verification_id) {
+      return { success: false, error: "Unable to submit payment reference. Please try again." };
+    }
+
+    return {
+      success: true,
+      verificationId: result.verification_id,
+      total: Number(result.total ?? 0),
+    };
+  } catch (err) {
+    console.error("submitPaymentVerification error:", err);
+    return { success: false, error: "Unable to submit payment reference. Please try again." };
+  }
+}
+
+/**
+ * The caller's OWN payment verification submissions (RLS-scoped), newest
+ * first — so the customer can see pending / rejected / approved status on the
+ * order-tracking pages.
+ */
+export async function getMyPaymentVerifications(): Promise<PaymentVerificationListResult> {
+  try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "You must be logged in." };
+    }
+
+    const { data, error } = await supabase
+      .from("payment_verifications")
+      .select(
+        "id, status, utr_number, payment_method, total, submitted_at, order_id, rejection_reason, decided_at, shipping"
+      )
+      .order("submitted_at", { ascending: false });
+
+    if (error) {
+      console.error("getMyPaymentVerifications failed:", error.message);
+      return { success: false, error: "Unable to load payment verifications." };
+    }
+
+    const rows = (data ?? []) as {
+      id: string;
+      status: PaymentVerificationSummary["status"];
+      utr_number: string;
+      payment_method: string;
+      total: number | string;
+      submitted_at: string;
+      order_id: string | null;
+      rejection_reason: string | null;
+      decided_at: string | null;
+      shipping: PaymentVerificationSummary["shipping"];
+    }[];
+
+    const list: PaymentVerificationSummary[] = rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      utrNumber: r.utr_number,
+      paymentMethod: r.payment_method,
+      total: Number(r.total ?? 0),
+      submittedAt: r.submitted_at,
+      orderId: r.order_id,
+      rejectionReason: r.rejection_reason,
+      decidedAt: r.decided_at,
+      // The exact delivery address submitted at checkout (RLS only ever
+      // returns the caller's own rows), so pending/rejected customers keep
+      // their delivery details and can retry without re-entering them.
+      shipping: r.shipping ?? null,
+    }));
+
+    return { success: true, data: list };
+  } catch (err) {
+    console.error("getMyPaymentVerifications error:", err);
+    return { success: false, error: "Unable to load payment verifications." };
   }
 }
 

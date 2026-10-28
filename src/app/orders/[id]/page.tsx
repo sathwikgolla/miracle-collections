@@ -192,7 +192,15 @@ export default function OrderDetailPage() {
                 <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-black">
                   <MapPin size={16} /> Delivery Address
                 </h2>
-                <p className="text-sm leading-relaxed text-neutral-600">{order.address}</p>
+                {/* The exact address captured at checkout, stored on this
+                    order's own shipping-address row (not the profile). */}
+                {order.addressName && (
+                  <p className="text-sm font-semibold text-black">{order.addressName}</p>
+                )}
+                {order.addressPhone && (
+                  <p className="font-mono text-xs text-neutral-500">{order.addressPhone}</p>
+                )}
+                <p className="mt-1 text-sm leading-relaxed text-neutral-600">{order.address}</p>
               </div>
               <div className="rounded-lg border border-neutral-200 bg-white p-5">
                 <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-black">

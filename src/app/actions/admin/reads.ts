@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/supabase/require-admin";
 import {
   getAllOrders,
   getPayments,
+  getPaymentVerifications,
   getCustomers,
   getCoupons,
   getStaff,
@@ -19,6 +20,7 @@ import {
 import type {
   AdminOrder,
   AdminPayment,
+  AdminPaymentVerification,
   AdminCustomer,
   AdminCoupon,
   AdminBanner,
@@ -50,6 +52,15 @@ export async function adminGetPayments(): Promise<AdminActionResult<AdminPayment
   const guard = await requireAdmin();
   if (!guard.ok) return guard.failure;
   return { success: true, data: await getPayments() };
+}
+
+/** Checkout payment verifications (pre-order UTR submissions), admin only. */
+export async function adminGetPaymentVerifications(): Promise<
+  AdminActionResult<AdminPaymentVerification[]>
+> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.failure;
+  return { success: true, data: await getPaymentVerifications() };
 }
 
 export async function adminGetCustomers(): Promise<AdminActionResult<AdminCustomer[]>> {

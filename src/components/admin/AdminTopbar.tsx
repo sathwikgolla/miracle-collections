@@ -191,7 +191,8 @@ export function AdminTopbar({
                         {pendingPaymentCount} Payment{pendingPaymentCount > 1 ? "s" : ""} need attention
                       </p>
                       <p className="text-[11px] text-neutral-600 mt-0.5">
-                        Awaiting the customer&apos;s UTR, or bank verification.
+                        Checkout submissions awaiting approval, customer UTRs, or bank
+                        verification.
                       </p>
                     </Link>
                   ) : (

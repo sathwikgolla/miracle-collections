@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from "react";
 import {
+  Check,
   ClipboardList,
+  Copy,
   Download,
   FileText,
+  MapPin,
   Search,
 } from "lucide-react";
 import { useAdmin } from "@/context/AdminContext";
@@ -12,7 +15,14 @@ import { formatPrice } from "@/lib/utils";
 import type { AdminOrder, AdminOrderStatus } from "@/lib/adminTypes";
 import { OrderDetailModal } from "@/components/admin/OrderDetailModal";
 import { InvoiceModal } from "@/components/admin/InvoiceModal";
+import { Modal } from "@/components/ui/Modal";
 import { normalizeOrderStatus } from "@/lib/orderStatus";
+import {
+  formatOrderAddress,
+  hasOrderAddress,
+  orderAddressLines,
+  orderAddressPreview,
+} from "@/lib/orderAddress";
 
 const STATUS_TABS: (AdminOrderStatus | "All")[] = [
   "All",
@@ -24,11 +34,60 @@ const STATUS_TABS: (AdminOrderStatus | "All")[] = [
   "Cancelled",
 ];
 
+/** Small popup with the complete saved address + one-click copy. */
+function AddressModal({ order, onClose }: { order: AdminOrder; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const s = order.shippingAddress;
+
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(formatOrderAddress(s));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard unavailable (permissions/insecure context) — the address is
+      // still fully visible on screen for manual copying.
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Delivery Address" className="max-w-md">
+      <p className="text-[11px] font-mono text-neutral-500">Order {order.id}</p>
+      <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
+        {s.name && <p className="font-semibold text-black">{s.name}</p>}
+        {s.phone && <p className="font-mono text-xs text-neutral-600">{s.phone}</p>}
+        <div className="mt-2 space-y-0.5 leading-relaxed text-neutral-700">
+          {orderAddressLines(s).map((line, i) => (
+            <p key={`${i}-${line}`}>{line}</p>
+          ))}
+        </div>
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          onClick={copyAddress}
+          className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-neutral-50 transition-colors"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy Address"}
+        </button>
+        <button
+          onClick={onClose}
+          className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export default function AdminOrdersPage() {
   const { orders, exportToCsv } = useAdmin();
   const [activeTab, setActiveTab] = useState<AdminOrderStatus | "All">("All");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  // Which order's full delivery address is open in the address popup.
+  const [addressOrder, setAddressOrder] = useState<AdminOrder | null>(null);
   const [invoiceOrder, setInvoiceOrder] = useState<{
     order: AdminOrder;
     tab: "invoice" | "packingslip";
@@ -154,6 +213,7 @@ export default function AdminOrdersPage() {
               <tr>
                 <th className="p-4">Order Details</th>
                 <th className="p-4">Customer</th>
+                <th className="p-4">Delivery Address</th>
                 <th className="p-4">Destination</th>
                 <th className="p-4">Items</th>
                 <th className="p-4">Total Amount</th>
@@ -181,6 +241,34 @@ export default function AdminOrdersPage() {
                     <td className="p-4 text-black">
                       <p className="font-semibold text-black">{o.customerName}</p>
                       <p className="text-neutral-500 font-mono text-[11px]">{o.customerPhone}</p>
+                    </td>
+
+                    {/* The exact address saved with THIS order — short preview
+                        in the table, full details (and copy) in the popup. */}
+                    <td className="p-4">
+                      {hasOrderAddress(o.shippingAddress) ? (
+                        <div className="min-w-0 max-w-[170px]">
+                          {o.shippingAddress.name && (
+                            <p className="truncate font-semibold text-black">
+                              {o.shippingAddress.name}
+                            </p>
+                          )}
+                          <p className="line-clamp-1 text-[11px] text-neutral-500">
+                            {orderAddressPreview(o.shippingAddress)}
+                          </p>
+                          <button
+                            onClick={() => setAddressOrder(o)}
+                            className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            View Address
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] italic text-neutral-400">
+                          Address unavailable
+                        </span>
+                      )}
                     </td>
 
                     <td className="p-4 text-neutral-600">
@@ -266,7 +354,7 @@ export default function AdminOrdersPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-neutral-500">
+                  <td colSpan={9} className="p-8 text-center text-neutral-500">
                     No orders match the selected filters or search query.
                   </td>
                 </tr>
@@ -294,6 +382,10 @@ export default function AdminOrdersPage() {
           defaultTab={invoiceOrder.tab}
           onClose={() => setInvoiceOrder(null)}
         />
+      )}
+
+      {addressOrder && (
+        <AddressModal order={addressOrder} onClose={() => setAddressOrder(null)} />
       )}
     </div>
   );

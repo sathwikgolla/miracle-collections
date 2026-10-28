@@ -103,6 +103,51 @@ export interface AdminPayment {
   expiresAt: string;
 }
 
+/**
+ * A checkout payment verification (UTR submitted BEFORE an order exists).
+ * A `pending` row is NOT an order: accepting it creates the order exactly
+ * once, rejecting it creates none.
+ */
+export interface AdminPaymentVerification {
+  id: string;
+  status: "pending" | "approved" | "rejected";
+  userId: string;
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone: string;
+  /** Server-computed payable total at submission (re-quoted at approval). */
+  amount: number;
+  utrNumber: string;
+  /** Raw checkout label ("UPI", "Credit / Debit Card", ...). */
+  paymentMethod: string;
+  /** Canonical method key (upi / card / netbanking / ...). */
+  paymentMethodKey: string;
+  /** Raw cart snapshot; names/prices are resolved from live product data. */
+  items: {
+    product_id: string;
+    quantity: number;
+    color?: string | null;
+    size?: string | null;
+  }[];
+  shipping: {
+    name: string;
+    phone: string;
+    line1: string;
+    line2?: string | null;
+    /** "Area / Landmark" captured at checkout (optional). */
+    landmark?: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  coupon?: string | null;
+  orderId?: string | null;
+  rejectionReason?: string | null;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  submittedAt: string;
+}
+
 export type AdminOrderStatus =
   | "Placed"
   | "Confirmed"
@@ -136,6 +181,7 @@ export interface AdminOrder {
     phone: string;
     line1: string;
     line2?: string;
+    landmark?: string;
     city: string;
     state: string;
     pincode: string;

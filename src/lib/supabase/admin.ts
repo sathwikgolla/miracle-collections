@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createClient } from '@supabase/supabase-js';
-import type { AdminOrder, AdminPayment, AdminCoupon, AdminCustomer, AdminBanner, AnnouncementBarItem, YouTubeVideoItem, AdminSettings, StaffMember, AuditLogEntry, CategoryFilter, StockLedgerEntry } from '@/lib/adminTypes';
+import type { AdminOrder, AdminPayment, AdminPaymentVerification, AdminCoupon, AdminCustomer, AdminBanner, AnnouncementBarItem, YouTubeVideoItem, AdminSettings, StaffMember, AuditLogEntry, CategoryFilter, StockLedgerEntry } from '@/lib/adminTypes';
 
 // Server-only admin client using the service-role key.
 //
@@ -114,6 +114,46 @@ export async function getPayments(): Promise<AdminPayment[]> {
   } catch (error) {
     console.error('Error fetching payments:', error);
     return [];
+  }
+}
+
+/**
+ * Get all checkout payment verifications (admin).
+ *
+ * These are the pre-order UTR submissions: `pending` rows have NO order yet
+ * and are what the admin accepts/rejects from /admin/payments.
+ */
+export async function getPaymentVerifications(): Promise<AdminPaymentVerification[]> {
+  try {
+    const { data, error } = await adminSupabase
+      .from('payment_verifications')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data ?? []).map(transformPaymentVerification);
+  } catch (error) {
+    console.error('Error fetching payment verifications:', error);
+    return [];
+  }
+}
+
+/** Get one checkout payment verification by id (admin). */
+export async function getPaymentVerificationById(id: string): Promise<AdminPaymentVerification | null> {
+  try {
+    const { data, error } = await adminSupabase
+      .from('payment_verifications')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data ? transformPaymentVerification(data) : null;
+  } catch (error) {
+    console.error('Error fetching payment verification:', error);
+    return null;
   }
 }
 
@@ -759,7 +799,13 @@ function transformAdminOrder(data: any): AdminOrder {
     customerName: data.customer_name,
     customerEmail: data.customer_email,
     customerPhone: data.customer_phone,
-    shippingAddress: data.order_shipping_addresses?.[0] || {},
+    // PostgREST embeds this one-to-one relation (UNIQUE order_id) as a single
+    // OBJECT, not an array — indexing [0] on it is undefined and would blank
+    // every address. Normalise both shapes so either form maps correctly.
+    shippingAddress:
+      (Array.isArray(data.order_shipping_addresses)
+        ? data.order_shipping_addresses[0]
+        : data.order_shipping_addresses) || {},
     items: data.order_items?.map((item: any) => ({
       productId: item.product_id,
       name: item.name,
@@ -789,6 +835,48 @@ function transformAdminOrder(data: any): AdminOrder {
       note: t.note,
       staff: t.staff_name,
     })) ?? [],
+  };
+}
+
+function transformPaymentVerification(data: {
+  id: string;
+  status: AdminPaymentVerification["status"];
+  user_id: string;
+  customer_name: string;
+  customer_email?: string | null;
+  customer_phone: string;
+  total: number | string;
+  utr_number?: string | null;
+  payment_method: string;
+  payment_method_key: string;
+  items?: AdminPaymentVerification["items"];
+  shipping?: AdminPaymentVerification["shipping"] | null;
+  coupon?: string | null;
+  order_id?: string | null;
+  rejection_reason?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  submitted_at: string;
+}): AdminPaymentVerification {
+  return {
+    id: data.id,
+    status: data.status,
+    userId: data.user_id,
+    customerName: data.customer_name,
+    customerEmail: data.customer_email,
+    customerPhone: data.customer_phone,
+    amount: Number(data.total ?? 0),
+    utrNumber: data.utr_number ?? '',
+    paymentMethod: data.payment_method,
+    paymentMethodKey: data.payment_method_key,
+    items: data.items ?? [],
+    shipping: data.shipping ?? ({} as AdminPaymentVerification["shipping"]),
+    coupon: data.coupon,
+    orderId: data.order_id,
+    rejectionReason: data.rejection_reason,
+    decidedBy: data.decided_by,
+    decidedAt: data.decided_at,
+    submittedAt: data.submitted_at,
   };
 }
 

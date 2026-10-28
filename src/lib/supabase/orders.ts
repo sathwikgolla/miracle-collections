@@ -38,7 +38,7 @@ export async function getOrders(userId: string): Promise<Order[] | null> {
         courier_name,
         tracking_number,
         order_items (id, product_id, name, price, quantity, image, variant),
-        order_shipping_addresses (id, line1, line2, city, state, pincode)
+        order_shipping_addresses (id, name, phone, line1, line2, landmark, city, state, pincode)
       `)
       .eq('user_id', userId)
       .order('placed_at', { ascending: false });
@@ -72,7 +72,7 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
         courier_name,
         tracking_number,
         order_items (id, product_id, name, price, quantity, image, variant),
-        order_shipping_addresses (id, line1, line2, city, state, pincode)
+        order_shipping_addresses (id, name, phone, line1, line2, landmark, city, state, pincode)
       `)
       .eq('id', orderId)
       .single();
@@ -103,9 +103,13 @@ function transformOrder(data: any): Order {
     };
   }) ?? [];
 
-  const shippingAddress = data.order_shipping_addresses?.[0];
+  // PostgREST returns this one-to-one embed (UNIQUE order_id) as an OBJECT,
+  // not an array — normalise both shapes so the saved address is never dropped.
+  const shippingAddress = Array.isArray(data.order_shipping_addresses)
+    ? data.order_shipping_addresses[0]
+    : data.order_shipping_addresses;
   const addressString = shippingAddress
-    ? `${shippingAddress.line1}${shippingAddress.line2 ? ', ' + shippingAddress.line2 : ''}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode}`
+    ? `${shippingAddress.line1}${shippingAddress.line2 ? ', ' + shippingAddress.line2 : ''}${shippingAddress.landmark ? ', ' + shippingAddress.landmark : ''}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode}`
     : '';
 
   return {
@@ -124,6 +128,10 @@ function transformOrder(data: any): Order {
     paymentStatus: data.payment_status as any,
     deliveryBy: new Date(new Date(data.placed_at).getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
     address: addressString,
+    // Recipient + contact exactly as captured at checkout (from the order's own
+    // shipping-address row — never the customer's current profile address).
+    addressName: shippingAddress?.name ?? undefined,
+    addressPhone: shippingAddress?.phone ?? undefined,
     paymentMethod: data.payment_method,
     courierName: data.courier_name ?? undefined,
     trackingNumber: data.tracking_number ?? undefined,

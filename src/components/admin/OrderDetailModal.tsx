@@ -22,6 +22,10 @@ import type { AdminOrder, AdminOrderStatus } from "@/lib/adminTypes";
 import { useAdmin } from "@/context/AdminContext";
 import { formatPrice } from "@/lib/utils";
 import { normalizeOrderStatus, orderLifecycleIndex } from "@/lib/orderStatus";
+import {
+  hasOrderAddress,
+  orderAddressLines,
+} from "@/lib/orderAddress";
 
 interface OrderDetailModalProps {
   order: AdminOrder | null;
@@ -282,12 +286,25 @@ export function OrderDetailModal({
               </div>
               <div className="flex items-start gap-2 text-neutral-600 text-xs pt-2 border-t border-neutral-200 mt-2">
                 <MapPin className="h-4 w-4 text-black shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-black font-medium">{order.shippingAddress.line1}</p>
-                  {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-                  <p>
-                    {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
-                  </p>
+                <div className="min-w-0">
+                  {/* The order's OWN saved delivery address. Every line is
+                      rendered only when present — never a ", -" placeholder —
+                      and "Address unavailable" when nothing was saved. */}
+                  {hasOrderAddress(order.shippingAddress) ? (
+                    <>
+                      {order.shippingAddress.name && (
+                        <p className="font-semibold text-black">{order.shippingAddress.name}</p>
+                      )}
+                      {order.shippingAddress.phone && (
+                        <p className="font-mono">{order.shippingAddress.phone}</p>
+                      )}
+                      {orderAddressLines(order.shippingAddress).map((line, i) => (
+                        <p key={`${i}-${line}`}>{line}</p>
+                      ))}
+                    </>
+                  ) : (
+                    <p className="italic text-neutral-500">Address unavailable</p>
+                  )}
                 </div>
               </div>
             </div>

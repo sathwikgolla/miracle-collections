@@ -1,0 +1,156 @@
+
+> saara-marketplace@0.1.0 dev
+> next dev -p 3001
+
+▲ Next.js 16.4.3 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.1.3:3001
+- Environments: .env.local
+✓ Ready in 692ms
+✓ Running next.config.ts took 62ms
+
+  Turbopack has seen frequent file updates and is waiting for the filesystem to settle (0.5s elapsed so far; last modified: "\\\\?\\D:\\desktop\\projects\\miracle-collections-clean\\node_modules\\pg-protocol\\dist\\inbound-parser.test.d.ts").
+○ Compiling / ...
+ GET / 200 in 6.3s (next.js: 5.5s, proxy.ts: 178ms, application-code: 539ms)
+ GET /products 200 in 704ms (next.js: 567ms, proxy.ts: 10ms, application-code: 127ms)
+ GET /login 200 in 564ms (next.js: 478ms, proxy.ts: 7ms, application-code: 79ms)
+ GET /cart 200 in 523ms (next.js: 413ms, proxy.ts: 11ms, application-code: 99ms)
+ GET /checkout 200 in 608ms (next.js: 521ms, proxy.ts: 8ms, application-code: 79ms)
+ GET /orders 200 in 487ms (next.js: 412ms, proxy.ts: 6ms, application-code: 69ms)
+ GET /admin 307 in 1194ms (next.js: 1036ms, proxy.ts: 9ms, application-code: 149ms)
+ GET /nonexistent-page-audit 404 in 627ms (next.js: 511ms, proxy.ts: 9ms, application-code: 107ms)
+ GET / 200 in 426ms (next.js: 220ms, proxy.ts: 24ms, application-code: 182ms)
+ GET /products 200 in 205ms (next.js: 56ms, proxy.ts: 16ms, application-code: 134ms)
+ GET /product/printed-saree 200 in 2.6s (next.js: 1619ms, proxy.ts: 10ms, application-code: 967ms)
+ GET /cart 200 in 154ms (next.js: 85ms, proxy.ts: 7ms, application-code: 63ms)
+ GET /checkout 200 in 105ms (next.js: 40ms, proxy.ts: 10ms, application-code: 56ms)
+ GET /login 200 in 101ms (next.js: 30ms, proxy.ts: 7ms, application-code: 64ms)
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <__next_root_layout_boundary__>
+      <SegmentViewNode type="layout" pagePath="layout.tsx">
+        <SegmentTrieNode>
+        <link>
+        <script>
+        <script>
+        <script>
+        <script>
+        <RootLayout>
+          <html lang="en" suppressHydrationWarning={true} className="inter_fe8b...">
+            <head>
+            <body suppressHydrationWarning={true} className="flex min-h...">
+              <StoreProvider>
+                <Suspense fallback={null}>
+                  <Navbar>
+                    <header className="sticky top...">
+                      <div>
+                      <div className="mx-auto ma...">
+                        <div>
+                        <SearchBar>
+                        <nav className="no-scrollb...">
+                          <LinkComponent>
+                          <LinkComponent>
+                          <CategoryNavItem category={{id:"clothing", ...}} active={false} canHover={true}>
++                           <div
++                             ref={{current:null}}
++                             suppressHydrationWarning={true}
++                             className="relative"
++                             onMouseEnter={function openMenu}
++                             onMouseLeave={function scheduleClose}
++                           >
+                          ...
+                ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at div (<anonymous>)
+    at CategoryNavItem (src/components/layout/Navbar.tsx:529:5)
+    at <unknown> (src/components/layout/Navbar.tsx:310:13)
+    at Array.map (<anonymous>)
+    at Navbar (src/components/layout/Navbar.tsx:309:23)
+    at RootLayout (src\app\layout.tsx:37:13)
+  527 |
+  528 |   return (
+> 529 |     <div
+      |     ^
+  530 |       ref={ref}
+  531 |       suppressHydrationWarning
+  532 |       className="relative"
+ GET /login 200 in 227ms (next.js: 11ms, proxy.ts: 12ms, application-code: 204ms)
+ GET /products 200 in 153ms (next.js: 25ms, proxy.ts: 11ms, application-code: 117ms)
+ GET /cart 200 in 96ms (next.js: 14ms, proxy.ts: 11ms, application-code: 71ms)
+ GET /products 200 in 119ms (next.js: 8ms, proxy.ts: 12ms, application-code: 99ms)
+ GET /product/printed-saree 200 in 579ms (next.js: 121ms, proxy.ts: 25ms, application-code: 434ms)
+ GET / 200 in 184ms (next.js: 39ms, proxy.ts: 14ms, application-code: 130ms)
+ GET /login 200 in 123ms (next.js: 22ms, proxy.ts: 18ms, application-code: 82ms)
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <__next_root_layout_boundary__>
+      <SegmentViewNode type="layout" pagePath="layout.tsx">
+        <SegmentTrieNode>
+        <link>
+        <script>
+        <script>
+        <script>
+        <script>
+        <RootLayout>
+          <html lang="en" suppressHydrationWarning={true} className="inter_fe8b...">
+            <head>
+            <body suppressHydrationWarning={true} className="flex min-h...">
+              <StoreProvider>
+                <Suspense fallback={null}>
+                  <Navbar>
+                    <header className="sticky top...">
+                      <div>
+                      <div className="mx-auto ma...">
+                        <div>
+                        <SearchBar>
+                        <nav className="no-scrollb...">
+                          <LinkComponent>
+                          <LinkComponent>
+                          <CategoryNavItem category={{id:"clothing", ...}} active={false} canHover={true}>
++                           <div
++                             ref={{current:null}}
++                             suppressHydrationWarning={true}
++                             className="relative"
++                             onMouseEnter={function openMenu}
++                             onMouseLeave={function scheduleClose}
++                           >
+                          ...
+                ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at div (<anonymous>)
+    at CategoryNavItem (src/components/layout/Navbar.tsx:529:5)
+    at <unknown> (src/components/layout/Navbar.tsx:310:13)
+    at Array.map (<anonymous>)
+    at Navbar (src/components/layout/Navbar.tsx:309:23)
+    at RootLayout (src\app\layout.tsx:37:13)
+  527 |
+  528 |   return (
+> 529 |     <div
+      |     ^
+  530 |       ref={ref}
+  531 |       suppressHydrationWarning
+  532 |       className="relative"

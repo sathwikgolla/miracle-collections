@@ -112,6 +112,10 @@ export interface Order {
   paymentStatus: PaymentStatus;
   deliveryBy: string;
   address: string;
+  /** Recipient name stored with this order's shipping address. */
+  addressName?: string;
+  /** Recipient phone stored with this order's shipping address. */
+  addressPhone?: string;
   paymentMethod: string;
   /** Courier partner, set when the order is dispatched. */
   courierName?: string;

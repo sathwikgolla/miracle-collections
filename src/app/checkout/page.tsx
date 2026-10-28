@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  BadgeCheck,
-  Banknote,
   Check,
-  CreditCard,
+  Clock,
   Loader2,
   MapPin,
   Pencil,
@@ -14,47 +12,27 @@ import {
   ShieldCheck,
   ShoppingBag,
   Smartphone,
-  Tag,
-  X,
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Button } from "@/components/ui/Button";
-import type { Address, PaymentStatus } from "@/lib/types";
+import type { Address } from "@/lib/types";
 import { cn, formatPrice, handleImageError } from "@/lib/utils";
+import { isValidUtr, requiresOnlinePaymentVerification } from "@/lib/paymentMethods";
+import { submitPaymentVerification } from "@/app/actions/orders";
 
 const DELIVERY_CHARGE = 50;
 const FREE_DELIVERY_THRESHOLD = 499;
 
-type PaymentMethod = "upi" | "card" | "netbanking" | "cod";
+type PaymentMethod = "upi";
 type Step = 0 | 1 | 2;
 
+// UPI is the ONLY payment method offered at checkout. Credit/Debit Card, Net
+// Banking and Cash on Delivery were removed here, and the server actions plus
+// the database's `upi_only` guards refuse them too, so a manipulated frontend
+// request or a direct API call cannot select a removed method.
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: typeof Smartphone }[] = [
   { id: "upi", label: "UPI", icon: Smartphone },
-  { id: "card", label: "Credit / Debit Card", icon: CreditCard },
-  { id: "netbanking", label: "Net Banking", icon: Banknote },
-  { id: "cod", label: "Cash on Delivery", icon: ShieldCheck },
-];
-
-const BANKS = [
-  "State Bank of India",
-  "HDFC Bank",
-  "ICICI Bank",
-  "Axis Bank",
-  "Kotak Mahindra Bank",
-  "Punjab National Bank",
-];
-
-interface Coupon {
-  code: string;
-  label: string;
-  discount: (subtotal: number) => number;
-}
-
-const COUPONS: Coupon[] = [
-  { code: "SAVE10", label: "10% off (up to ₹200)", discount: (s) => Math.min(200, Math.round(s * 0.1)) },
-  { code: "WELCOME20", label: "Flat ₹20 off", discount: () => 20 },
-  { code: "FLAT100", label: "Flat ₹100 off", discount: () => 100 },
 ];
 
 const EMPTY_ADDRESS: Omit<Address, "id"> = {
@@ -69,8 +47,7 @@ const EMPTY_ADDRESS: Omit<Address, "id"> = {
 };
 
 function CheckoutInner() {
-  const router = useRouter();
-  const { cart, hydrated, addresses, addAddress, placeOrder, toast, products } = useStore();
+  const { cart, hydrated, addresses, addAddress, toast, products, clearCart } = useStore();
   const [step, setStep] = useState<Step>(0);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     addresses[0]?.id ?? null
@@ -78,15 +55,19 @@ function CheckoutInner() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState<Omit<Address, "id">>(EMPTY_ADDRESS);
 
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
-  const [couponError, setCouponError] = useState("");
-
   const [payment, setPayment] = useState<PaymentMethod>("upi");
   const [upiId, setUpiId] = useState("");
-  const [card, setCard] = useState({ number: "", holder: "", expiry: "", cvv: "" });
-  const [bank, setBank] = useState(BANKS[0]);
   const [processing, setProcessing] = useState(false);
+
+  // Online payment verification (UTR) — captured BEFORE the final submission.
+  // Checking the box is an acknowledgement only, never proof of payment.
+  const [utr, setUtr] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [submitted, setSubmitted] = useState<{
+    verificationId: string;
+    utr: string;
+    total: number;
+  } | null>(null);
 
   const getProductById = (id: string) => products.find((p: any) => p.id === id);
   const items = cart
@@ -97,10 +78,55 @@ function CheckoutInner() {
   const itemTotal = items.reduce((s, { item, product }) => s + product!.price * item.qty, 0);
   const discount = mrpTotal - itemTotal;
   const deliveryCharge = itemTotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_CHARGE;
-  const couponDiscount = appliedCoupon ? appliedCoupon.discount(itemTotal) : 0;
-  const total = Math.max(0, itemTotal + deliveryCharge - couponDiscount);
+  // No coupon section exists any more: the total is items + delivery charge,
+  // the same figure the server re-computes for the verification submission, the
+  // admin approval quote and the final order.
+  const total = Math.max(0, itemTotal + deliveryCharge);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
+
+  const paymentLabel = PAYMENT_METHODS.find((p) => p.id === payment)!.label;
+  // COD is the only method that does not need a UTR / admin verification.
+  const onlinePayment = requiresOnlinePaymentVerification(paymentLabel);
+  const utrValid = isValidUtr(utr);
+
+  // After an online submission the checkout is complete — show the
+  // "awaiting verification" confirmation instead of the (now empty) cart.
+  if (submitted) {
+    return (
+      <main className="mx-auto max-w-2xl flex-1 px-4 py-10 sm:px-6">
+        <div className="rounded-lg border border-neutral-200 bg-white p-6 text-center sm:p-8">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+            <Clock size={28} className="text-amber-600" />
+          </div>
+          <h1 className="mt-4 text-xl font-extrabold text-black sm:text-2xl">
+            Payment reference submitted
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+            We received UTR <span className="font-mono font-bold text-black">{submitted.utr}</span>{" "}
+            for <span className="font-bold text-black">{formatPrice(submitted.total)}</span>. Your
+            order has <span className="font-bold text-black">not been placed yet</span> — it will be
+            created only after our admin verifies your payment.
+          </p>
+          <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+            Complete your payment first, then enter your UTR/transaction reference number. Your
+            order will be confirmed only after admin verification.
+          </p>
+          <p className="mt-4 text-xs text-neutral-500">
+            Submission reference: <span className="font-mono font-semibold text-black">{submitted.verificationId}</span>
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button asChild>
+              <Link href="/orders">Track Verification Status</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/products">Continue Shopping</Link>
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (hydrated && cart.length === 0) {
     return (
@@ -138,31 +164,13 @@ function CheckoutInner() {
     }
   };
 
-  const applyCoupon = () => {
-    const code = couponCode.trim().toUpperCase();
-    const found = COUPONS.find((c) => c.code === code);
-    if (!found) {
-      setCouponError("Invalid coupon code");
-      return;
-    }
-    setAppliedCoupon(found);
-    setCouponError("");
-    toast(`Coupon ${found.code} applied!`);
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode("");
-    setCouponError("");
-  };
-
   const canPlace =
     step === 2 &&
     Boolean(selectedAddress) &&
-    (payment === "cod" ||
-      (payment === "upi" && upiId.trim()) ||
-      (payment === "card" && card.number && card.holder && card.expiry && card.cvv) ||
-      (payment === "netbanking" && bank));
+    // UPI ID + (for the online flow) a valid UTR and the required
+    // acknowledgement checkbox.
+    Boolean(upiId.trim()) &&
+    (!onlinePayment || (utrValid && acknowledged));
 
   const placeOrderAction = async () => {
     if (!selectedAddress) {
@@ -170,38 +178,66 @@ function CheckoutInner() {
       toast("Please select a delivery address", "error");
       return;
     }
-    setProcessing(true);
-    const paymentStatus: PaymentStatus = payment === "cod" ? "Pending" : "Paid";
-    const order = await placeOrder({
-      items: items.map(({ item, product }) => ({
-        productId: product!.id,
-        name: product!.name,
-        brand: product!.brand,
-        price: product!.price,
-        qty: item.qty,
-        image: product!.images[0],
-        color: item.color,
-        size: item.size,
-      })),
-      itemTotal,
-      discount,
-      deliveryCharge,
-      coupon: appliedCoupon?.code ?? "",
-      couponDiscount,
-      total,
-      status: "Confirmed",
-      paymentStatus,
-      deliveryBy: formatDelivery(5),
-      address: formatAddress(selectedAddress),
-      paymentMethod: PAYMENT_METHODS.find((p) => p.id === payment)!.label,
-    }, selectedAddress);
-    if (order) {
+
+    // ---- Online payment: submit for verification, do NOT place an order ----
+    if (onlinePayment) {
+      if (!acknowledged) {
+        toast(
+          "Please confirm that you completed the payment and entered your UTR number",
+          "error"
+        );
+        return;
+      }
+      if (!utrValid) {
+        toast("Enter a valid UTR / transaction reference number", "error");
+        return;
+      }
+      setProcessing(true);
+      const result = await submitPaymentVerification({
+        items: items.map(({ item, product }) => ({
+          productId: product!.id,
+          qty: item.qty,
+          color: item.color,
+          size: item.size,
+        })),
+        shipping: {
+          name: selectedAddress.name,
+          phone: selectedAddress.phone,
+          line1: selectedAddress.line1,
+          line2: selectedAddress.line2,
+          // The "Area / Landmark" field is part of the address the customer
+          // entered — it must travel with the submission so the pending record
+          // (and, on approval, the order) holds the exact checkout address.
+          landmark: selectedAddress.landmark,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          pincode: selectedAddress.pincode,
+        },
+        paymentMethod: paymentLabel,
+        utr,
+        acknowledged: true,
+      });
       setProcessing(false);
-      router.replace(`/order-success?id=${order.id}`);
-    } else {
-      setProcessing(false);
-      toast("Failed to place order", "error");
+
+      if (result.success) {
+        setSubmitted({
+          verificationId: result.verificationId,
+          utr: utr.trim().toUpperCase(),
+          total: result.total,
+        });
+        // The server already cleared the cart as part of the submission.
+        void clearCart();
+        toast("Payment reference submitted for verification");
+      } else {
+        toast(result.error, "error");
+      }
+      return;
     }
+
+    // UPI is the only method left, and it always takes the verification path
+    // above — there is no direct "place order" branch any more, so Cash on
+    // Delivery (and the removed card/net banking methods) can no longer create
+    // an order from this screen.
   };
 
   const steps: { label: string }[] = [
@@ -433,42 +469,67 @@ function CheckoutInner() {
                 </div>
               )}
 
-              {payment === "card" && (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-sm font-medium text-black">Card Number</label>
-                    <input value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value.replace(/\D/g, "").slice(0, 16) })} placeholder="1234 5678 9012 3456" inputMode="numeric" className={input} />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-sm font-medium text-black">Card Holder Name</label>
-                    <input value={card.holder} onChange={(e) => setCard({ ...card, holder: e.target.value })} placeholder="Name on card" className={input} />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-black">Expiry Date</label>
-                    <input value={card.expiry} onChange={(e) => setCard({ ...card, expiry: e.target.value })} placeholder="MM/YY" className={input} />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-black">CVV</label>
-                    <input value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) })} placeholder="•••" type="password" className={input} />
-                  </div>
-                </div>
-              )}
+              {/* UTR + acknowledgement — required before an ONLINE order can be
+                  submitted for verification. The checkbox is an acknowledgement,
+                  never proof of payment. */}
+              {onlinePayment && (
+                <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4">
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-amber-900">
+                    <ShieldCheck size={15} /> Pay first, then submit your UTR
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                    Complete your payment first, then enter your UTR/transaction reference number.
+                    Your order will be confirmed only after admin verification.
+                  </p>
 
-              {payment === "netbanking" && (
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-sm font-medium text-black">Select Bank</label>
-                  <select value={bank} onChange={(e) => setBank(e.target.value)} className={cn(input, "cursor-pointer")}>
-                    {BANKS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                  <label
+                    htmlFor="checkout-utr"
+                    className="mb-1.5 mt-3 block text-sm font-medium text-black"
+                  >
+                    UTR / Transaction Reference Number <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="checkout-utr"
+                    value={utr}
+                    onChange={(e) =>
+                      setUtr(e.target.value.replace(/\s/g, "").toUpperCase().slice(0, 30))
+                    }
+                    placeholder="e.g. 402912345678"
+                    inputMode="text"
+                    autoComplete="off"
+                    className={input}
+                  />
+                  {utr.length > 0 && !utrValid && (
+                    <p className="mt-1 text-xs text-red-600">
+                      Enter a valid UTR/reference number (6-30 letters or digits).
+                    </p>
+                  )}
+                  {!utrValid && utr.length === 0 && (
+                    <p className="mt-1 text-xs text-red-600">
+                      Your UTR number is required before you can submit this order.
+                    </p>
+                  )}
 
-              {payment === "cod" && (
-                <p className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-                  Pay when your order is delivered.
-                </p>
+                  <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={acknowledged}
+                      onChange={(e) => setAcknowledged(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+                    />
+                    <span className="text-xs leading-relaxed text-neutral-700">
+                      I have completed the payment of{" "}
+                      <span className="font-bold text-black">{formatPrice(total)}</span> and entered
+                      the correct UTR/reference number above. I understand my order will be placed
+                      only after admin verification.
+                    </span>
+                  </label>
+                  {!acknowledged && (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      This acknowledgement is required before submitting.
+                    </p>
+                  )}
+                </div>
               )}
 
               <p className="mt-4 flex items-center gap-1.5 text-xs text-neutral-400">
@@ -494,85 +555,21 @@ function CheckoutInner() {
               <span className="text-neutral-600">Delivery charge</span>
               <span className="font-medium text-black">{deliveryCharge === 0 ? "FREE" : formatPrice(deliveryCharge)}</span>
             </div>
-            {couponDiscount > 0 && (
-              <div className="flex justify-between">
-                <span className="text-neutral-600">Coupon ({appliedCoupon?.code})</span>
-                <span className="font-medium text-green-700">− {formatPrice(couponDiscount)}</span>
-              </div>
-            )}
             <div className="flex justify-between border-t border-dashed border-neutral-300 pt-3 text-base font-bold text-black">
               <span>Total</span>
               <span>{formatPrice(total)}</span>
             </div>
           </div>
 
-          {/* Coupon */}
-          {appliedCoupon ? (
-            <div className="mt-4 flex items-center justify-between rounded-md bg-green-50 px-3 py-2.5 text-sm">
-              <span className="flex items-center gap-1.5 font-semibold text-green-700">
-                <BadgeCheck size={15} /> {appliedCoupon.code}
-                <span className="font-normal">· {appliedCoupon.label}</span>
-              </span>
-              <button onClick={removeCoupon} className="text-neutral-500 hover:text-black" aria-label="Remove coupon">
-                <X size={15} />
-              </button>
-            </div>
-          ) : (
-            <div className="mt-4">
-              <label className="mb-1.5 block text-sm font-medium text-black">Enter Coupon Code</label>
-              <div className="flex gap-2">
-                <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Coupon code" className={cn(input, "uppercase")} />
-                <Button variant="outline" className="shrink-0" onClick={applyCoupon}>Apply</Button>
-              </div>
-              {couponError && <p className="mt-1 text-xs text-red-600">{couponError}</p>}
-            </div>
-          )}
-
-          {/* Available coupons — shown regardless of applied state */}
-          <p className="mb-2 mt-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-neutral-400">
-            <Tag size={13} /> Available Coupons
-          </p>
-          <div className="space-y-2">
-            {COUPONS.map((c) => {
-              const active = appliedCoupon?.code === c.code;
-              return (
-                <div
-                  key={c.code}
-                  className={cn(
-                    "flex items-center justify-between gap-2 rounded-md border border-dashed px-3 py-2",
-                    active ? "border-green-500 bg-green-50" : "border-neutral-300"
-                  )}
-                >
-                  <div>
-                    <p className="text-sm font-extrabold text-black">{c.code}</p>
-                    <p className="text-xs text-neutral-500">{c.label}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={active ? "ghost" : "outline"}
-                    onClick={() => {
-                      if (active) {
-                        removeCoupon();
-                      } else {
-                        setCouponCode(c.code);
-                        setAppliedCoupon(c);
-                        setCouponError("");
-                      }
-                    }}
-                  >
-                    {active ? "Remove" : "Apply"}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-
           {step === 2 && (
             <Button size="lg" fullWidth className="mt-5" onClick={placeOrderAction} disabled={!canPlace || processing}>
               {processing ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Processing payment...
+                  <Loader2 size={16} className="animate-spin" />{" "}
+                  {onlinePayment ? "Submitting for verification..." : "Processing payment..."}
                 </>
+              ) : onlinePayment ? (
+                `Submit for Verification · ${formatPrice(total)}`
               ) : (
                 `Place Order · ${formatPrice(total)}`
               )}
@@ -598,14 +595,6 @@ function formatAddress(a: Address): string {
   return [a.name, a.line1, a.line2, a.landmark, a.city, a.state + " - " + a.pincode]
     .filter(Boolean)
     .join(", ");
-}
-
-function formatDelivery(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${weekdays[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 export default function CheckoutPage() {

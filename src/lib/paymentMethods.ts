@@ -46,6 +46,40 @@ export function requiresOnlinePaymentVerification(method?: string | null): boole
   return key !== "cod" && key !== "unknown";
 }
 
+/**
+ * The checkout currently offers exactly ONE payment method: UPI (card, net
+ * banking and Cash on Delivery were removed from the storefront).
+ *
+ * This is the server-side allowlist enforced by placeOrderSecure() and
+ * submitPaymentVerification(), so a manipulated client that re-selects a
+ * removed method — in the UI or by calling the actions directly — is rejected.
+ * The database enforces the same rule for new orders (`upi_only`) and the
+ * checkout UI renders exactly these methods.
+ */
+export const CHECKOUT_PAYMENT_METHOD_KEYS: readonly string[] = ["upi"];
+
+/** Whether a payment-method label may be used for a NEW checkout order/submission. */
+export function isCheckoutPaymentMethodAllowed(method?: string | null): boolean {
+  return CHECKOUT_PAYMENT_METHOD_KEYS.includes(paymentMethodKey(method));
+}
+
+/**
+ * Normalise a customer-submitted UTR / transaction reference for storage and
+ * comparison: trims, strips inner whitespace and upper-cases.
+ */
+export function normalizeUtr(value?: string | null): string {
+  return (value ?? "").trim().replace(/\s+/g, "").toUpperCase();
+}
+
+/**
+ * Whether a submitted reference is structurally valid: 6-30 alphanumeric
+ * characters (dashes allowed). This is a FORMAT check only — it never proves a
+ * payment happened; only the admin's verification does that.
+ */
+export function isValidUtr(value?: string | null): boolean {
+  return /^[A-Za-z0-9-]{6,30}$/.test(normalizeUtr(value));
+}
+
 /** Friendly, customer-facing label for an order/payment status value. */
 export function paymentStatusLabel(status?: string | null): string {
   switch (status) {

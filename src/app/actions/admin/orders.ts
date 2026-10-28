@@ -3,10 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { ADMIN_MESSAGES, type AdminActionResult } from "@/lib/adminActionResult";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { adminSupabase, getOrderById } from "@/lib/supabase/admin";
+import {
+  adminSupabase,
+  getOrderById,
+  getPaymentVerificationById,
+} from "@/lib/supabase/admin";
 import { normalizeOrderStatus } from "@/lib/orderStatus";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
-import type { AdminOrder } from "@/lib/adminTypes";
+import type { AdminOrder, AdminPaymentVerification } from "@/lib/adminTypes";
 import type { Product } from "@/lib/types";
 import { transformProduct } from "@/lib/supabase/productMapper";
 
@@ -298,6 +302,189 @@ export async function adminVerifyPayment(
     return { success: true, data: payment?.order_id ? await getOrderById(payment.order_id) : null };
   } catch (error) {
     console.error("Error verifying payment:", error);
+    return { success: false, status: 500, error: ADMIN_MESSAGES.failed };
+  }
+}
+
+/** Shared error mapping for the payment-verification RPCs. */
+function verificationRpcError(message: string): AdminActionResult<never> {
+  const m = (message ?? "").toLowerCase();
+  if (m.includes("forbidden")) return { success: false, status: 403, error: ADMIN_MESSAGES.forbidden };
+  if (m.includes("unauthenticated")) return { success: false, status: 401, error: "You must be logged in." };
+  if (m.includes("insufficient_stock")) {
+    const productName = message.split(":")[1]?.trim();
+    return {
+      success: false,
+      status: 409,
+      error: productName
+        ? `Insufficient stock for ${productName}.`
+        : "Insufficient stock for one or more items.",
+    };
+  }
+  if (m.includes("product_not_found") || m.includes("product_unavailable"))
+    return { success: false, status: 409, error: "One of the items is no longer available." };
+  if (m.includes("invalid_variant"))
+    return { success: false, status: 409, error: "The selected size or colour is no longer available." };
+  if (m.includes("could not find the function") || m.includes("schema cache") || m.includes("pgrst202"))
+    return {
+      success: false,
+      status: 500,
+      error: "Payment verification is not available yet. Please apply the checkout-verification migration.",
+    };
+  return { success: false, status: 500, error: ADMIN_MESSAGES.failed };
+}
+
+/**
+ * ACCEPT a checkout payment verification — the ONLY way an online-payment
+ * order now comes into existence.
+ *
+ * Delegates to the atomic `approve_payment_verification` Postgres function
+ * (admin-checked, row-locked, idempotent): it re-quotes prices/stock from
+ * live data, creates the order EXACTLY ONCE with `Placed` + payment `Verified`,
+ * and marks the payments row verified — all in one transaction. A second call
+ * returns the same order instead of creating another.
+ */
+export async function adminApprovePaymentVerification(verificationId: string): Promise<
+  AdminActionResult<{
+    order: AdminOrder | null;
+    verification: AdminPaymentVerification | null;
+    alreadyApproved: boolean;
+  }>
+> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.failure;
+
+  try {
+    const staffName = await actingStaffName(guard.userId);
+
+    // SECURITY DEFINER RPC, but called with the caller's authenticated session
+    // so the function's own auth.uid() + profiles.role check is the authority.
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.rpc("approve_payment_verification", {
+      p_verification_id: verificationId,
+      p_staff_name: staffName,
+    });
+
+    if (error) {
+      console.error("approve_payment_verification failed:", error.message);
+      return verificationRpcError(error.message);
+    }
+
+    const result = (data ?? {}) as {
+      success?: boolean;
+      already_approved?: boolean;
+      order_id?: string;
+      error?: string;
+    };
+
+    if (result.success === false) {
+      if (result.error === "not_found")
+        return { success: false, status: 404, error: "Payment verification not found." };
+      if (result.error === "already_rejected")
+        return {
+          success: false,
+          status: 409,
+          error: "This submission was already rejected — no order was placed.",
+        };
+      return { success: false, status: 409, error: "This submission can no longer be approved." };
+    }
+
+    const orderId = result.order_id ?? "";
+    const order = orderId ? await getOrderById(orderId) : null;
+    const verification = await getPaymentVerificationById(verificationId);
+
+    // Audit (an idempotent repeat approval is logged too, but marked as such).
+    await adminSupabase.from("audit_logs").insert({
+      id: `LOG-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      timestamp: new Date().toISOString(),
+      staff_name: staffName,
+      role: "Admin",
+      module: "Payments",
+      action: "Verify",
+      description: result.already_approved
+        ? `Payment verification ${verificationId} was already approved (order ${orderId})`
+        : `Approved payment verification ${verificationId} (UTR ${verification?.utrNumber ?? "n/a"}); placed order ${orderId}`,
+      ip_address: "unknown",
+    });
+
+    revalidateOrderViews();
+    revalidatePath("/admin/payments");
+
+    return {
+      success: true,
+      data: { order, verification, alreadyApproved: Boolean(result.already_approved) },
+    };
+  } catch (error) {
+    console.error("Error approving payment verification:", error);
+    return { success: false, status: 500, error: ADMIN_MESSAGES.failed };
+  }
+}
+
+/**
+ * REJECT a checkout payment verification. No order is ever created; the
+ * database restores the customer's cart items in the same transaction.
+ * Idempotent: rejecting twice is a no-op, and an already-approved submission
+ * can no longer be rejected.
+ */
+export async function adminRejectPaymentVerification(
+  verificationId: string,
+  reason: string
+): Promise<AdminActionResult<AdminPaymentVerification | null>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.failure;
+
+  try {
+    const staffName = await actingStaffName(guard.userId);
+
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.rpc("reject_payment_verification", {
+      p_verification_id: verificationId,
+      p_reason: reason,
+      p_staff_name: staffName,
+    });
+
+    if (error) {
+      console.error("reject_payment_verification failed:", error.message);
+      return verificationRpcError(error.message);
+    }
+
+    const result = (data ?? {}) as {
+      success?: boolean;
+      already_rejected?: boolean;
+      error?: string;
+    };
+
+    if (result.success === false) {
+      if (result.error === "not_found")
+        return { success: false, status: 404, error: "Payment verification not found." };
+      if (result.error === "already_approved")
+        return {
+          success: false,
+          status: 409,
+          error: "This submission was already approved — the order exists and cannot be undone here.",
+        };
+      return { success: false, status: 409, error: "This submission can no longer be rejected." };
+    }
+
+    const verification = await getPaymentVerificationById(verificationId);
+
+    await adminSupabase.from("audit_logs").insert({
+      id: `LOG-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      timestamp: new Date().toISOString(),
+      staff_name: staffName,
+      role: "Admin",
+      module: "Payments",
+      action: "Reject",
+      description: `Rejected payment verification ${verificationId}: ${reason}`,
+      ip_address: "unknown",
+    });
+
+    revalidateOrderViews();
+    revalidatePath("/admin/payments");
+
+    return { success: true, data: verification };
+  } catch (error) {
+    console.error("Error rejecting payment verification:", error);
     return { success: false, status: 500, error: ADMIN_MESSAGES.failed };
   }
 }

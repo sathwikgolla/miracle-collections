@@ -19,6 +19,7 @@ import type {
   AdminOrder,
   AdminOrderStatus,
   AdminPayment,
+  AdminPaymentVerification,
   AdminProduct,
   AdminSettings,
   AnnouncementBarItem,
@@ -37,6 +38,7 @@ import { useStore } from "@/context/StoreContext";
 import {
   adminGetOrders,
   adminGetPayments,
+  adminGetPaymentVerifications,
   adminGetCustomers,
   adminGetCoupons,
   adminGetBanners,
@@ -86,6 +88,8 @@ import {
   adminUpdateOrderStatus,
   adminVerifyPayment,
   adminRejectPayment,
+  adminApprovePaymentVerification,
+  adminRejectPaymentVerification,
 } from "@/app/actions/admin/orders";
 import { countLowStock } from "@/lib/inventory";
 import { isAwaitingConfirmation } from "@/lib/orderStatus";
@@ -101,7 +105,7 @@ import type { Product } from "@/lib/types";
  * and `categories`) are fetched, each at most once per session.
  */
 const ROUTE_DATASETS: Record<string, string[]> = {
-  "/admin": ["orders", "payments", "customers", "settings"],
+  "/admin": ["orders", "payments", "paymentVerifications", "customers", "settings"],
   "/admin/audit": ["auditLogs"],
   "/admin/categories": ["filters"],
   "/admin/content": ["banners", "announcements", "youtubeVideos"],
@@ -109,7 +113,7 @@ const ROUTE_DATASETS: Record<string, string[]> = {
   "/admin/customers": ["customers", "orders"],
   "/admin/inventory": ["stockLedger"],
   "/admin/orders": ["orders"],
-  "/admin/payments": ["payments", "settings"],
+  "/admin/payments": ["payments", "paymentVerifications", "settings"],
   "/admin/products": [],
   "/admin/reports": ["orders", "payments"],
   "/admin/settings": ["settings"],
@@ -129,6 +133,8 @@ interface AdminContextValue {
   filters: CategoryFilter[];
   orders: AdminOrder[];
   payments: AdminPayment[];
+  /** Checkout UTR submissions awaiting an accept/reject decision (pre-order). */
+  paymentVerifications: AdminPaymentVerification[];
   stockLedger: StockLedgerEntry[];
   customers: AdminCustomer[];
   coupons: AdminCoupon[];
@@ -163,6 +169,10 @@ interface AdminContextValue {
   confirmOrder: (orderId: string) => Promise<void>;
   verifyPayment: (orderId: string, paymentId: string) => Promise<boolean>;
   rejectPayment: (orderId: string, paymentId: string, reason: string) => Promise<boolean>;
+  /** Accept a checkout UTR submission — this is what creates the order (once). */
+  approvePaymentVerification: (verificationId: string) => Promise<boolean>;
+  /** Reject a checkout UTR submission — creates no order; restores the cart. */
+  rejectPaymentVerification: (verificationId: string, reason: string) => Promise<boolean>;
   updateOrderStatus: (
     orderId: string,
     newStatus: AdminOrderStatus,
@@ -264,6 +274,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [filters, setFilters] = useState<CategoryFilter[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [payments, setPayments] = useState<AdminPayment[]>([]);
+  const [paymentVerifications, setPaymentVerifications] = useState<AdminPaymentVerification[]>([]);
   const [stockLedger, setStockLedger] = useState<StockLedgerEntry[]>([]);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
@@ -310,6 +321,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       payments: async () => {
         const res = await adminGetPayments();
         setPayments(res.success ? res.data : []);
+      },
+      paymentVerifications: async () => {
+        const res = await adminGetPaymentVerifications();
+        setPaymentVerifications(res.success ? res.data : []);
       },
       customers: async () => {
         const res = await adminGetCustomers();
@@ -417,11 +432,121 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     [currentStaff]
   );
 
-  /** Replace a single order in state with the authoritative server copy. */
+  /**
+   * Apply a single authoritative order: replace it in place, or insert it when
+   * it is new (approving a payment verification CREATES an order, so the admin
+   * list must gain that row without a refetch).
+   */
   const replaceOrder = useCallback((updated: AdminOrder | null) => {
     if (!updated) return;
-    setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    setOrders((prev) =>
+      prev.some((o) => o.id === updated.id)
+        ? prev.map((o) => (o.id === updated.id ? updated : o))
+        : [updated, ...prev]
+    );
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // AUTO-SYNC of the datasets behind the payment-verification queue
+  // ---------------------------------------------------------------------------
+  // Supabase Realtime is NOT configured in this project (no `channel()`
+  // subscriptions anywhere and no `supabase_realtime` publication on these
+  // tables), so instead of adding an infrastructure dependency we poll the
+  // EXISTING admin read actions: they run server-side behind requireAdmin()
+  // with the service-role client, so no key and no extra privilege is exposed.
+  //
+  // Rules that keep this safe:
+  //   * only the datasets the current admin route already needs are refreshed,
+  //   * ticks never overlap (a slow fetch skips the next tick instead of piling up),
+  //   * polling pauses while the tab is hidden and refreshes immediately when it
+  //     comes back, and everything is cleared on unmount,
+  //   * a failed tick never blanks the UI — the next tick simply retries,
+  //   * approve/reject additionally re-fetch from the server right away, so the
+  //     UI never depends on a tick arriving (DB state stays the source of truth).
+  // ---------------------------------------------------------------------------
+  const syncInFlightRef = useRef(false);
+  // Cross-tab wake-up: an action in one admin tab refreshes its siblings now
+  // rather than on their next tick.
+  const syncChannelRef = useRef<BroadcastChannel | null>(null);
+
+  const syncAdminData = useCallback(async () => {
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
+    try {
+      const route = pathname.replace(/\/+$/, "") || "/admin";
+      const needed = new Set(ROUTE_DATASETS[route] ?? []);
+      const jobs: Promise<void>[] = [];
+
+      if (needed.has("paymentVerifications")) {
+        jobs.push(
+          adminGetPaymentVerifications().then((res) => {
+            if (res.success) setPaymentVerifications(res.data);
+          })
+        );
+      }
+      if (needed.has("payments")) {
+        jobs.push(
+          adminGetPayments().then((res) => {
+            if (res.success) setPayments(res.data);
+          })
+        );
+      }
+      if (needed.has("orders")) {
+        jobs.push(
+          adminGetOrders().then((res) => {
+            if (res.success) setOrders(res.data);
+          })
+        );
+      }
+
+      if (jobs.length > 0) await Promise.all(jobs);
+    } catch (error) {
+      console.error("Admin auto-sync failed:", error);
+    } finally {
+      syncInFlightRef.current = false;
+    }
+  }, [pathname]);
+
+  const notifyAdminTabs = useCallback(() => {
+    try {
+      syncChannelRef.current?.postMessage("admin-data-changed");
+    } catch {
+      // Channel already closed — this tab is still covered by its own poll.
+    }
+  }, []);
+
+  useEffect(() => {
+    const INTERVAL_MS = 20_000;
+
+    const tick = () => {
+      if (typeof document === "undefined" || document.visibilityState === "visible") {
+        void syncAdminData();
+      }
+    };
+
+    const channel =
+      typeof BroadcastChannel !== "undefined"
+        ? new BroadcastChannel("miracle-admin-sync")
+        : null;
+    if (channel) {
+      channel.onmessage = tick;
+      syncChannelRef.current = channel;
+    }
+
+    const timer = setInterval(tick, INTERVAL_MS);
+    // Returning to a hidden tab shows fresh data immediately instead of stale rows.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      channel?.close();
+      syncChannelRef.current = null;
+    };
+  }, [syncAdminData]);
 
   // Orders & Payments
   /**
@@ -457,14 +582,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   );
 
   // Calculations
-  // Both "awaiting the customer's UTR" and "submitted, awaiting verification"
-  // are payments that need admin attention.
+  // Needs admin attention: pre-order checkout submissions awaiting an
+  // accept/reject decision, plus legacy "awaiting the customer's UTR" and
+  // "submitted, awaiting verification" payments on existing orders.
   const pendingPaymentCount = useMemo(
     () =>
       payments.filter(
         (p) => p.status === "pending_verification" || p.status === "awaiting_reference"
-      ).length,
-    [payments]
+      ).length +
+      paymentVerifications.filter((v) => v.status === "pending").length,
+    [payments, paymentVerifications]
   );
 
   // Orders awaiting admin acceptance — the "new order" signal. Drops to zero
@@ -529,6 +656,68 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       return result.success;
     },
     [logAudit, adminToast, replaceOrder]
+  );
+
+  /**
+   * ACCEPT a checkout UTR submission. The atomic server RPC re-prices the cart
+   * against live data and creates the order EXACTLY ONCE (Placed + payment
+   * Verified); a repeat click returns the same order instead of a second one.
+   */
+  const approvePaymentVerification = useCallback(
+    async (verificationId: string) => {
+      const result = await adminApprovePaymentVerification(verificationId);
+      if (!result.success) {
+        adminToast(result.error || "Failed to approve payment", "error");
+        return false;
+      }
+      const { order, verification, alreadyApproved } = result.data;
+      if (verification) {
+        setPaymentVerifications((prev) =>
+          prev.map((v) => (v.id === verificationId ? verification : v))
+        );
+      }
+      if (order) replaceOrder(order);
+      // Server-confirmed refresh (not a local guess, and not a wait for the next
+      // poll tick): re-read the verification list, payments and orders, then
+      // wake any other admin tab so its table, badge and counts match too.
+      await syncAdminData();
+      notifyAdminTabs();
+      adminToast(
+        alreadyApproved
+          ? "Already approved — order unchanged"
+          : `Payment verified; order ${order?.id ?? ""} placed`,
+        "success"
+      );
+      return true;
+    },
+    [adminToast, replaceOrder, syncAdminData, notifyAdminTabs]
+  );
+
+  /**
+   * REJECT a checkout UTR submission: no order is placed (the database
+   * restores the customer's cart so they can retry).
+   */
+  const rejectPaymentVerification = useCallback(
+    async (verificationId: string, reason: string) => {
+      const result = await adminRejectPaymentVerification(verificationId, reason);
+      if (!result.success) {
+        adminToast(result.error || "Failed to reject payment", "error");
+        return false;
+      }
+      const updated = result.data;
+      if (updated) {
+        setPaymentVerifications((prev) =>
+          prev.map((v) => (v.id === verificationId ? updated : v))
+        );
+      }
+      // Same server-confirmed refresh as approval: no order exists, so the list,
+      // the pending count and any other open tab must all drop back immediately.
+      await syncAdminData();
+      notifyAdminTabs();
+      adminToast("Payment rejected — no order was placed", "error");
+      return true;
+    },
+    [adminToast, syncAdminData, notifyAdminTabs]
   );
 
   const updateOrderStatus = useCallback(
@@ -1124,6 +1313,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       filters,
       orders,
       payments,
+      paymentVerifications,
       stockLedger,
       customers,
       coupons,
@@ -1148,6 +1338,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       confirmOrder,
       verifyPayment,
       rejectPayment,
+      approvePaymentVerification,
+      rejectPaymentVerification,
       updateOrderStatus,
       addInternalOrderNote,
       saveProduct,
@@ -1185,6 +1377,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       filters,
       orders,
       payments,
+      paymentVerifications,
       stockLedger,
       customers,
       coupons,
@@ -1209,6 +1402,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       confirmOrder,
       verifyPayment,
       rejectPayment,
+      approvePaymentVerification,
+      rejectPaymentVerification,
       updateOrderStatus,
       addInternalOrderNote,
       saveProduct,

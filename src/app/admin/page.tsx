@@ -27,6 +27,7 @@ export default function AdminDashboardPage() {
   const {
     orders,
     payments,
+    paymentVerifications,
     products,
     customers,
     settings,
@@ -47,7 +48,8 @@ export default function AdminDashboardPage() {
 
   // Pending Payments list
   // Match the shared pendingPaymentCount predicate so the KPI and this list
-  // can never disagree: awaiting a customer UTR + awaiting verification.
+  // can never disagree: pre-order checkout submissions awaiting a decision +
+  // awaiting a customer UTR + awaiting verification on existing orders.
   const pendingPayments = useMemo(
     () =>
       payments.filter(
@@ -55,6 +57,11 @@ export default function AdminDashboardPage() {
       ),
     [payments]
   );
+  const pendingVerifications = useMemo(
+    () => paymentVerifications.filter((v) => v.status === "pending"),
+    [paymentVerifications]
+  );
+  const pendingQueueCount = pendingPayments.length + pendingVerifications.length;
 
   // Dynamic Chart Data based on period
   const chartData = useMemo(() => {
@@ -349,7 +356,7 @@ export default function AdminDashboardPage() {
               <CreditCard className="h-4 w-4 text-black" />
               <h2 className="text-sm font-bold text-black">Pending UTR Verifications</h2>
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
-                {pendingPayments.length} Urgent
+                {pendingQueueCount} Urgent
               </span>
             </div>
             <Link
@@ -362,8 +369,37 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="divide-y divide-neutral-100 max-h-64 overflow-y-auto">
-            {pendingPayments.length > 0 ? (
-              pendingPayments.map((p) => (
+            {pendingQueueCount > 0 ? (
+              <>
+                {/* Pre-order submissions: no order exists yet — review on /admin/payments */}
+                {pendingVerifications.map((v) => (
+                  <div key={v.id} className="py-3 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-black">New checkout submission</span>
+                        <span className="rounded bg-amber-50 text-amber-700 px-1.5 py-0.5 text-[10px] font-bold border border-amber-200">
+                          PRE-ORDER
+                        </span>
+                      </div>
+                      <p className="text-neutral-500 mt-0.5">
+                        {v.customerName} •{" "}
+                        UTR: <span className="font-mono text-black font-semibold">{v.utrNumber}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-black font-mono">{formatPrice(v.amount)}</span>
+                      <Link
+                        href="/admin/payments"
+                        className="rounded-md bg-black hover:bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                      >
+                        Review
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+
+                {pendingPayments.map((p) => (
                 <div key={p.id} className="py-3 flex items-center justify-between text-xs">
                   <div>
                     <div className="flex items-center gap-2">
@@ -400,7 +436,8 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
                 </div>
-              ))
+              ))}
+              </>
             ) : (
               <p className="text-xs text-neutral-500 py-6 text-center">
                 All UTR payments verified. Queue is clear!

@@ -61,6 +61,12 @@ export function OrderSuccessClient() {
             <p className="flex items-center gap-1.5 font-bold text-black">
               <MapPin size={15} /> Delivery Address
             </p>
+            {order?.addressName && (
+              <p className="mt-1 font-semibold text-black">{order.addressName}</p>
+            )}
+            {order?.addressPhone && (
+              <p className="font-mono text-xs text-neutral-500">{order.addressPhone}</p>
+            )}
             <p className="mt-1 text-neutral-600">{order?.address}</p>
           </div>
         </div>
