@@ -18,7 +18,11 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Button } from "@/components/ui/Button";
 import type { Address } from "@/lib/types";
 import { cn, formatPrice, handleImageError } from "@/lib/utils";
-import { isValidUtr, requiresOnlinePaymentVerification } from "@/lib/paymentMethods";
+import {
+  isValidUtr,
+  requiresOnlinePaymentVerification,
+  UTR_INVALID_MESSAGE,
+} from "@/lib/paymentMethods";
 import { submitPaymentVerification } from "@/app/actions/orders";
 
 const DELIVERY_CHARGE = 50;
@@ -189,7 +193,7 @@ function CheckoutInner() {
         return;
       }
       if (!utrValid) {
-        toast("Enter a valid UTR / transaction reference number", "error");
+        toast(UTR_INVALID_MESSAGE, "error");
         return;
       }
       setProcessing(true);
@@ -222,7 +226,7 @@ function CheckoutInner() {
       if (result.success) {
         setSubmitted({
           verificationId: result.verificationId,
-          utr: utr.trim().toUpperCase(),
+          utr: utr.trim(),
           total: result.total,
         });
         // The server already cleared the cart as part of the submission.
@@ -491,18 +495,17 @@ function CheckoutInner() {
                   <input
                     id="checkout-utr"
                     value={utr}
-                    onChange={(e) =>
-                      setUtr(e.target.value.replace(/\s/g, "").toUpperCase().slice(0, 30))
-                    }
+                    // Kept as a plain string: leading zeros must survive and an
+                    // invalid value is rejected by validation, never silently
+                    // truncated or repaired here.
+                    onChange={(e) => setUtr(e.target.value.slice(0, 30))}
                     placeholder="e.g. 402912345678"
-                    inputMode="text"
+                    inputMode="numeric"
                     autoComplete="off"
                     className={input}
                   />
                   {utr.length > 0 && !utrValid && (
-                    <p className="mt-1 text-xs text-red-600">
-                      Enter a valid UTR/reference number (6-30 letters or digits).
-                    </p>
+                    <p className="mt-1 text-xs text-red-600">{UTR_INVALID_MESSAGE}</p>
                   )}
                   {!utrValid && utr.length === 0 && (
                     <p className="mt-1 text-xs text-red-600">

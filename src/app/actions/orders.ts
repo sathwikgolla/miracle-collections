@@ -6,6 +6,7 @@ import {
   isValidUtr,
   normalizeUtr,
   requiresOnlinePaymentVerification,
+  UTR_INVALID_MESSAGE,
 } from "@/lib/paymentMethods";
 import type {
   CancelOrderResult,
@@ -51,7 +52,7 @@ function safeOrderError(message: string): string {
 function safeVerificationError(message: string): string {
   const m = (message ?? "").toLowerCase();
   if (m.includes("invalid_utr"))
-    return "Enter a valid UTR / transaction reference number (6-30 letters or digits).";
+    return UTR_INVALID_MESSAGE;
   if (m.includes("duplicate_utr"))
     return "This reference number is already linked to another payment.";
   if (m.includes("already_pending"))
@@ -167,8 +168,11 @@ export async function submitOrderPaymentUtr(
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
     if (!orderId) return { success: false, error: "Order not found." };
-    const cleanUtr = (utr ?? "").trim();
+    const cleanUtr = normalizeUtr(utr);
     if (!cleanUtr) return { success: false, error: "Enter the UPI/UTR reference number." };
+    // Strict format check on the server too (exactly 12 digits) — the RPC's
+    // own validation is a second, independent layer.
+    if (!isValidUtr(cleanUtr)) return { success: false, error: UTR_INVALID_MESSAGE };
 
     const supabase = await createServerSupabase();
     const {
@@ -209,7 +213,7 @@ export async function submitOrderPaymentUtr(
     if (error) {
       console.error("submit_order_payment failed:", error.message);
       const m = (error.message ?? "").toLowerCase();
-      if (m.includes("invalid_utr")) return { success: false, error: "Enter the UPI/UTR reference number." };
+      if (m.includes("invalid_utr")) return { success: false, error: UTR_INVALID_MESSAGE };
       if (m.includes("duplicate_utr"))
         return { success: false, error: "This reference is already linked to another order." };
       if (m.includes("not_required"))
@@ -276,7 +280,7 @@ export async function submitPaymentVerification(
     if (!isValidUtr(utr)) {
       return {
         success: false,
-        error: "Enter a valid UTR / transaction reference number (6-30 letters or digits).",
+        error: UTR_INVALID_MESSAGE,
       };
     }
     // UPI only — card / net banking / COD submissions are refused server-side,

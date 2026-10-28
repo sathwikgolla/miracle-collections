@@ -309,6 +309,15 @@ export async function adminVerifyPayment(
 /** Shared error mapping for the payment-verification RPCs. */
 function verificationRpcError(message: string): AdminActionResult<never> {
   const m = (message ?? "").toLowerCase();
+  // A legacy submission (captured before the strict 12-digit rule) cannot be
+  // approved — the database refuses it too. Tell the admin what to do next.
+  if (m.includes("invalid_utr"))
+    return {
+      success: false,
+      status: 409,
+      error:
+        "This submission's UTR is not a valid 12-digit number. Reject it and ask the customer to resubmit with a correct UTR.",
+    };
   if (m.includes("forbidden")) return { success: false, status: 403, error: ADMIN_MESSAGES.forbidden };
   if (m.includes("unauthenticated")) return { success: false, status: 401, error: "You must be logged in." };
   if (m.includes("insufficient_stock")) {

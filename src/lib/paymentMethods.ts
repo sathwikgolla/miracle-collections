@@ -64,20 +64,33 @@ export function isCheckoutPaymentMethodAllowed(method?: string | null): boolean 
 }
 
 /**
+ * The strict UTR format required across checkout, the payment-verification
+ * RPCs and admin approval: EXACTLY 12 numeric digits (Indian UPI UTR).
+ * Leading zeros are preserved because a UTR is always handled as a string.
+ */
+export const UTR_REGEX = /^[0-9]{12}$/;
+
+/** The one customer-facing message used wherever a UTR fails the format check. */
+export const UTR_INVALID_MESSAGE =
+  "UTR number should be 12 digits. Please enter a valid UTR number.";
+
+/**
  * Normalise a customer-submitted UTR / transaction reference for storage and
- * comparison: trims, strips inner whitespace and upper-cases.
+ * comparison: trims accidental leading/trailing whitespace only. Inner
+ * whitespace is NOT stripped — it must fail validation instead of being
+ * silently repaired — and leading zeros are never dropped.
  */
 export function normalizeUtr(value?: string | null): string {
-  return (value ?? "").trim().replace(/\s+/g, "").toUpperCase();
+  return (value ?? "").trim();
 }
 
 /**
- * Whether a submitted reference is structurally valid: 6-30 alphanumeric
- * characters (dashes allowed). This is a FORMAT check only — it never proves a
- * payment happened; only the admin's verification does that.
+ * Whether a submitted reference is structurally valid: EXACTLY 12 digits.
+ * This is a FORMAT check only — it never proves a payment happened; only the
+ * admin's verification does that.
  */
 export function isValidUtr(value?: string | null): boolean {
-  return /^[A-Za-z0-9-]{6,30}$/.test(normalizeUtr(value));
+  return UTR_REGEX.test(normalizeUtr(value));
 }
 
 /** Friendly, customer-facing label for an order/payment status value. */

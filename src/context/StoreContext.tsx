@@ -495,12 +495,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async (key: string) => {
       if (!user) return;
       const item = cart.find((i) => i.key === key);
-      if (item) {
-        await removeFromCartSupabase(user.id, item.productId, item.color, item.size);
-        setCart((prev) => prev.filter((i) => i.key !== key));
+      if (!item) return;
+      const removed = await removeFromCartSupabase(
+        user.id,
+        item.productId,
+        item.color,
+        item.size
+      );
+      if (!removed) {
+        // The database row is still there — say so instead of pretending the
+        // item is gone (it would just come back on the next page load).
+        toast("Couldn't remove the item from your cart. Please try again.", "error");
+        return;
       }
+      // The delete matched on product + colour + size (all matching rows), so
+      // the local state must filter on the same identity to stay in sync.
+      setCart((prev) =>
+        prev.filter(
+          (i) =>
+            !(
+              i.productId === item.productId &&
+              (i.color ?? null) === (item.color ?? null) &&
+              (i.size ?? null) === (item.size ?? null)
+            )
+        )
+      );
     },
-    [user, cart]
+    [user, cart, toast]
   );
 
   const updateQty = useCallback(
@@ -515,7 +536,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const upper = Math.min(10, available ?? 10);
         const nextQty = Math.max(1, Math.min(upper, qty));
         if (qty > upper) toast(`Only ${upper} available`, "error");
-        await updateCartItemSupabase(user.id, item.productId, nextQty, item.color, item.size);
+        const updated = await updateCartItemSupabase(
+          user.id,
+          item.productId,
+          nextQty,
+          item.color,
+          item.size
+        );
+        if (!updated) {
+          toast("Couldn't update the quantity. Please try again.", "error");
+          return;
+        }
         setCart((prev) => prev.map((i) => (i.key === key ? { ...i, qty: nextQty } : i)));
       }
     },
@@ -526,8 +557,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async (key: string) => {
       const item = cart.find((i) => i.key === key);
       if (item && user) {
+        const removed = await removeFromCartSupabase(
+          user.id,
+          item.productId,
+          item.color,
+          item.size
+        );
+        if (!removed) {
+          toast("Couldn't update your cart. Please try again.", "error");
+          return;
+        }
         await addToWishlistSupabase(user.id, item.productId);
-        await removeFromCartSupabase(user.id, item.productId, item.color, item.size);
         setWishlist((prev) => (prev.includes(item.productId) ? prev : [...prev, item.productId]));
         setCart((prev) => prev.filter((i) => i.key !== key));
         toast("Moved to wishlist", "info");
@@ -675,9 +715,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(async () => {
     if (!user) return;
-    await clearCartSupabase(user.id);
+    const cleared = await clearCartSupabase(user.id);
+    if (!cleared) {
+      toast("Couldn't clear your cart. Please try again.", "error");
+      return;
+    }
     setCart([]);
-  }, [user]);
+  }, [user, toast]);
 
   // Product helpers
   const getProductById = useCallback(

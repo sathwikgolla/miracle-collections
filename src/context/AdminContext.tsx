@@ -289,6 +289,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   const [currentStaff, setCurrentStaff] = useState<StaffMember | null>(null);
   const [toasts, setToasts] = useState<AdminToast[]>([]);
+  // Single timer for the visible toast. Cleared before every new schedule so a
+  // stale timeout can never re-hide or leave a later notification behind.
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load ONLY the datasets the current admin route needs (plus the always-needed
   // staff + categories). Each dataset is fetched at most once per session, so
@@ -387,13 +390,29 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     })();
   }, [pathname]);
 
+  /**
+   * Show ONE temporary admin notification. A new toast REPLACES the current
+   * one (never stacks), and auto-dismisses after 4 seconds — approving many
+   * UTR submissions in a row therefore always leaves exactly one short-lived
+   * message and then a clean screen.
+   */
   const adminToast = useCallback((message: string, type: AdminToast["type"] = "success") => {
     const id = "t_" + Math.random().toString(36).slice(2, 9);
-    setToasts((t) => [...t, { id, message, type }]);
-    setTimeout(() => {
+    setToasts([{ id, message, type }]);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
       setToasts((t) => t.filter((x) => x.id !== id));
-    }, 3200);
+      toastTimerRef.current = null;
+    }, 4000);
   }, []);
+
+  // Never leak a pending dismissal timer when the admin shell unmounts.
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    },
+    []
+  );
 
   const logAudit = useCallback(
     (
@@ -685,7 +704,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       adminToast(
         alreadyApproved
           ? "Already approved — order unchanged"
-          : `Payment verified; order ${order?.id ?? ""} placed`,
+          : "Payment verified and order placed successfully.",
         "success"
       );
       return true;

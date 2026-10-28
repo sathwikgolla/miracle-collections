@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/Button";
+import { isValidUtr, UTR_INVALID_MESSAGE } from "@/lib/paymentMethods";
 
 /**
  * Lets a customer submit the UPI/UTR reference for their own pending order.
@@ -17,9 +18,13 @@ export function UtrPaymentForm({ orderId }: { orderId: string }) {
   const [utr, setUtr] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Strict 12-digit format, re-checked on the server as well — the disabled
+  // button is only a convenience, never the actual guard.
+  const valid = isValidUtr(utr);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!utr.trim()) return;
+    if (!valid) return;
     setSubmitting(true);
     const ok = await submitUtr(orderId, utr.trim());
     setSubmitting(false);
@@ -38,12 +43,13 @@ export function UtrPaymentForm({ orderId }: { orderId: string }) {
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           value={utr}
-          onChange={(e) => setUtr(e.target.value)}
+          onChange={(e) => setUtr(e.target.value.slice(0, 30))}
           placeholder="e.g. 402912345678"
           inputMode="numeric"
+          aria-invalid={utr.length > 0 && !valid}
           className="h-10 min-w-[220px] flex-1 rounded-md border border-amber-300 bg-white px-3 text-sm text-black outline-none focus:border-black"
         />
-        <Button type="submit" disabled={submitting || !utr.trim()}>
+        <Button type="submit" disabled={submitting || !valid}>
           {submitting ? (
             <>
               <Loader2 size={15} className="animate-spin" /> Submitting…
@@ -53,6 +59,9 @@ export function UtrPaymentForm({ orderId }: { orderId: string }) {
           )}
         </Button>
       </div>
+      {utr.length > 0 && !valid && (
+        <p className="mt-2 text-xs text-red-600">{UTR_INVALID_MESSAGE}</p>
+      )}
     </form>
   );
 }

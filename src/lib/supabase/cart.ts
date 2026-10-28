@@ -58,14 +58,19 @@ export async function updateCartItem(
   size?: string
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
+    // Variant columns are NULL for plain products. `.eq(col, null)` compiles
+    // to `col = 'null'`, which never matches a NULL column — so a NULL variant
+    // must be filtered with `.is(col, null)` or the update matches 0 rows and
+    // silently "succeeds".
+    let query = supabase
       .from('cart_items')
       .update({ quantity })
       .eq('user_id', userId)
-      .eq('product_id', productId)
-      .eq('color', color ?? null)
-      .eq('size', size ?? null);
+      .eq('product_id', productId);
+    query = color == null ? query.is('color', null) : query.eq('color', color);
+    query = size == null ? query.is('size', null) : query.eq('size', size);
 
+    const { error } = await query;
     if (error) throw error;
 
     return true;
@@ -84,14 +89,19 @@ export async function removeFromCart(
   size?: string
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
+    // Same NULL-variant rule as updateCartItem: `.eq(col, null)` would match
+    // nothing, the DELETE would succeed without removing the row, and the
+    // deleted item would reappear on the next page load. Ownership is always
+    // constrained to the caller's own user_id (RLS mirrors this server-side).
+    let query = supabase
       .from('cart_items')
       .delete()
       .eq('user_id', userId)
-      .eq('product_id', productId)
-      .eq('color', color ?? null)
-      .eq('size', size ?? null);
+      .eq('product_id', productId);
+    query = color == null ? query.is('color', null) : query.eq('color', color);
+    query = size == null ? query.is('size', null) : query.eq('size', size);
 
+    const { error } = await query;
     if (error) throw error;
 
     return true;
