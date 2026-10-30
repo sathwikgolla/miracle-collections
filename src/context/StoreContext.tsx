@@ -34,6 +34,7 @@ import { getWishlist, addToWishlist as addToWishlistSupabase, removeFromWishlist
 import { getOrders, getOrderById } from "@/lib/supabase/orders";
 import { placeOrderSecure, cancelOrderSecure, submitOrderPaymentUtr } from "@/app/actions/orders";
 import { getAddresses, addAddress as addAddressSupabase, updateAddress as updateAddressSupabase, deleteAddress as deleteAddressSupabase } from "@/lib/supabase/addresses";
+import { products as fallbackProducts } from "@/data/products";
 
 interface StoreValue {
   // Core
@@ -181,7 +182,7 @@ const SEED_NOTIFICATIONS: AppNotification[] = [
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   // Supabase-backed state
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -312,7 +313,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           getProductsForCards(),
           getCategories(),
         ]);
-        if (productsData) setProducts(productsData);
+        if (productsData && productsData.length > 0) {
+          setProducts(productsData);
+        } else {
+          setProducts(fallbackProducts);
+        }
         setCategories(categoriesData);
         setSubcategories(buildSubcategoryOptions(categoriesData));
 

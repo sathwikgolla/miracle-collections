@@ -117,6 +117,20 @@ export function handleImageError(e: React.SyntheticEvent<HTMLImageElement, Event
 }
 
 /**
+ * Clean SVG data URI placeholder for user and staff profile avatars.
+ */
+export const FALLBACK_AVATAR = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="50" fill="#262626"/><circle cx="50" cy="38" r="18" fill="#e5e5e5"/><path d="M22 84c0-15.5 12.5-28 28-28s28 12.5 28 28" fill="#e5e5e5"/></svg>'
+)}`;
+
+export function handleAvatarError(e: React.SyntheticEvent<HTMLImageElement, Event>) {
+  const target = e.currentTarget;
+  if (target.src !== FALLBACK_AVATAR) {
+    target.src = FALLBACK_AVATAR;
+  }
+}
+
+/**
  * Purchasable stock for a product (optionally for a specific size/colour).
  *
  * Mirrors the availability rule used by the product mapper and the admin

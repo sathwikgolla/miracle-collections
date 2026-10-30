@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { Category } from "@/lib/types";
+import { handleImageError } from "@/lib/utils";
 
 export function CategoryCard({ category }: { category: Category }) {
   return (
@@ -14,6 +15,7 @@ export function CategoryCard({ category }: { category: Category }) {
           src={category.image}
           alt={category.name}
           loading="lazy"
+          onError={handleImageError}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
       </div>

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { AdminOrder, AdminOrderStatus } from "@/lib/adminTypes";
 import { useAdmin } from "@/context/AdminContext";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, handleImageError } from "@/lib/utils";
 import { normalizeOrderStatus, orderLifecycleIndex } from "@/lib/orderStatus";
 import {
   hasOrderAddress,
@@ -358,6 +358,7 @@ export function OrderDetailModal({
                     <img
                       src={item.image}
                       alt={item.name}
+                      onError={handleImageError}
                       className="h-12 w-12 rounded-lg object-cover border border-neutral-200"
                     />
                     <div>

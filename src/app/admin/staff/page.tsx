@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Plus, Shield, ShieldCheck, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useAdmin } from "@/context/AdminContext";
 import type { StaffMember, StaffRole } from "@/lib/adminTypes";
+import { handleAvatarError } from "@/lib/utils";
 
 const ROLES: StaffRole[] = [
   "Super Admin",
@@ -104,6 +105,7 @@ export default function AdminStaffPage() {
                     <img
                       src={s.avatar}
                       alt={s.name}
+                      onError={handleAvatarError}
                       className="h-10 w-10 rounded-full object-cover border border-neutral-200"
                     />
                     <div>

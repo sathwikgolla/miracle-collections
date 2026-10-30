@@ -3,43 +3,60 @@
 import Link from "next/link";
 import { ArrowRight, Wallet } from "lucide-react";
 import { handleImageError } from "@/lib/utils";
+import type { AdminBudgetTier } from "@/lib/homepageTypes";
 
-const BUDGET_TIERS = [
+const BUDGET_TIERS: AdminBudgetTier[] = [
   {
+    id: "budget-499",
     label: "Under ₹499",
     description: "Cotton t-shirts, basic tops, socks & everyday essentials",
     href: "/products?maxPrice=499",
     badge: "Budget Friendly",
     popular: "Pure Cotton Tees, Relaxed Tops",
     image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+    order: 1,
+    active: true,
   },
   {
+    id: "budget-999",
     label: "Under ₹999",
     description: "Printed kurtis, casual footwear & kids festive sets",
     href: "/products?maxPrice=999",
     badge: "Sweet Spot",
     popular: "Anarkali Sets, Wedge Sandals",
     image: "https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=400&q=80",
+    order: 2,
+    active: true,
   },
   {
+    id: "budget-1499",
     label: "Under ₹1,499",
     description: "Denim jackets, casual sneakers & formal trousers",
     href: "/products?maxPrice=1499",
     badge: "Most Popular",
     popular: "Denim Outerwear, Walk Sneakers",
     image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=400&q=80",
+    order: 3,
+    active: true,
   },
   {
+    id: "budget-2499",
     label: "Under ₹2,499",
     description: "High-top boots, formal leather brogues & festive suits",
     href: "/products?maxPrice=2499",
     badge: "Premium Finds",
     popular: "Street Boots, Leather Brogues",
     image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80",
+    order: 4,
+    active: true,
   },
 ];
 
-export function ShopByBudget() {
+export function ShopByBudget({ tiers }: { tiers?: AdminBudgetTier[] } = {}) {
+  const displayTiers = (tiers && tiers.length > 0 ? tiers : BUDGET_TIERS)
+    .filter((t) => t.active !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
   return (
     <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
       <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
@@ -68,9 +85,9 @@ export function ShopByBudget() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {BUDGET_TIERS.map((tier) => (
+        {displayTiers.map((tier) => (
           <Link
-            key={tier.label}
+            key={tier.id || tier.label}
             href={tier.href}
             className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-black/30 hover:shadow-md"
           >
@@ -118,4 +135,3 @@ export function ShopByBudget() {
     </section>
   );
 }
-

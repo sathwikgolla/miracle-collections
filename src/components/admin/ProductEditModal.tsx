@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { AdminProduct, AdminVariant } from "@/lib/adminTypes";
+import { handleImageError } from "@/lib/utils";
 import { useAdmin } from "@/context/AdminContext";
 import { uploadProductImage } from "@/app/actions/admin/upload-image";
 
@@ -464,7 +465,7 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
                   className="relative group rounded-lg overflow-hidden border border-neutral-200 aspect-square bg-neutral-100"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imgUrl} alt="Product preview" className="w-full h-full object-cover" />
+                  <img src={imgUrl} alt="Product preview" onError={handleImageError} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(i)}

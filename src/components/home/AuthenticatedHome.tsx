@@ -7,20 +7,19 @@ import {
   Clock,
   Compass,
   Heart,
-  Layers,
   Package,
-  ShieldCheck,
   ShoppingCart,
   Sparkles,
-  Tag,
   TrendingUp,
-  Truck,
   User as UserIcon,
   X,
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/product/ProductCard";
-import { handleImageError, cn } from "@/lib/utils";
+import { HomeHero } from "@/components/home/HomeHero";
+import { CategorySection } from "@/components/home/CategorySection";
+import { VideoShowcase } from "@/components/home/VideoShowcase";
+import { handleImageError } from "@/lib/utils";
 import type { User } from "@/lib/types";
 
 export function AuthenticatedHome({ user }: { user: User }) {
@@ -102,124 +101,59 @@ export function AuthenticatedHome({ user }: { user: User }) {
   }, [recentlyViewed, wishlist, cart, getProductById, products]);
 
   // 3. New Arrivals (Filter products with "New" badge or latest)
-  const newArrivals = useMemo(() => {
-    const tagged = products.filter((p) => p.badges.includes("New"));
-    if (tagged.length >= 4) return tagged.slice(0, 4);
-    return products.slice(0, 4);
-  }, [products]);
+  const taggedArrivals = products.filter((p) => p.badges.includes("New"));
+  const newArrivals = taggedArrivals.length >= 4 ? taggedArrivals.slice(0, 4) : products.slice(0, 4);
 
   return (
     <main className="flex-1 pb-16">
-      {/* 1. Personalized Welcome Section */}
-      <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-8">
-        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-800">
-                <Sparkles size={13} className="text-neutral-900" />
-                Miracle Member Experience
-              </span>
+      {/* 1. Hero Section (Identical to Homepage Hero Section) */}
+      <HomeHero />
+
+      {/* Member Welcome & Quick Status Strip */}
+      <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white shrink-0">
+              {firstName.charAt(0).toUpperCase()}
+            </span>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-extrabold text-black">
+                  Welcome back, {firstName}!
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                  <Sparkles size={10} /> Member Active
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500">
+                Miracle Member Experience · Your personalized shopping picks are ready below
+              </p>
             </div>
-            <h1 className="text-2xl xs:text-3xl font-black tracking-tight text-black sm:text-4xl lg:text-5xl">
-              Welcome back,{" "}
-              <span className="underline decoration-neutral-300 decoration-2 underline-offset-8">
-                {firstName}
-              </span>
-              !
-            </h1>
-            <p className="mt-2 text-base text-neutral-600 sm:text-lg">
-              Discover something you&apos;ll love today.
-            </p>
           </div>
 
           {/* Quick status summary chips */}
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutral-600">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutral-700">
             <Link
               href="/orders"
-              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm transition-colors hover:border-black hover:text-black"
+              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-1.5 shadow-xs transition-colors hover:border-black hover:text-black"
             >
-              <Package size={14} />
-              {orders.length} {orders.length === 1 ? "Order" : "Orders"}
+              <Package size={13} />
+              <span>{orders.length} {orders.length === 1 ? "Order" : "Orders"}</span>
             </Link>
             <Link
               href="/wishlist"
-              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm transition-colors hover:border-black hover:text-black"
+              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-1.5 shadow-xs transition-colors hover:border-black hover:text-black"
             >
-              <Heart size={14} />
-              {wishlist.length} Wishlist
+              <Heart size={13} />
+              <span>{wishlist.length} Wishlist</span>
             </Link>
             <Link
               href="/cart"
-              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm transition-colors hover:border-black hover:text-black"
+              className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-1.5 shadow-xs transition-colors hover:border-black hover:text-black"
             >
-              <ShoppingCart size={14} />
-              {cartCount} in Cart
+              <ShoppingCart size={13} />
+              <span>{cartCount} in Bag</span>
             </Link>
-          </div>
-        </div>
-
-        {/* Hero banner area below greeting */}
-        <div className="relative overflow-hidden rounded-2xl bg-neutral-900 px-4 py-8 text-white shadow-xl sm:px-10 sm:py-12 lg:px-14">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-neutral-800/60 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-neutral-800/40 blur-3xl" />
-
-          <div className="relative z-10 grid items-center gap-8 lg:grid-cols-12">
-            <div className="lg:col-span-8">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-neutral-200 backdrop-blur-sm">
-                  <Tag size={12} /> Personalized For You
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-neutral-300">
-                  <Truck size={12} /> Complimentary Shipping on Orders Over ₹499
-                </span>
-              </div>
-
-              <h2 className="text-xl xs:text-2xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl lg:leading-tight">
-                Curated Styles, <br />
-                <span className="text-neutral-300">Tailored For Your Taste.</span>
-              </h2>
-
-              <p className="mt-4 max-w-xl text-sm leading-relaxed text-neutral-300 sm:text-base">
-                Explore handpicked clothing and footwear designed for modern comfort
-                and everyday elegance. Pick up right where you left off or dive into fresh arrivals.
-              </p>
-
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/products"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-white px-6 text-sm font-bold text-black transition-all hover:bg-neutral-100 hover:shadow-md"
-                >
-                  Start Shopping <ArrowRight size={16} />
-                </Link>
-                <a
-                  href="#recommendations"
-                  className="inline-flex h-11 items-center justify-center rounded-lg border border-white/20 bg-white/5 px-5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/15"
-                >
-                  View Recommendations
-                </a>
-              </div>
-            </div>
-
-            <div className="hidden lg:col-span-4 lg:block">
-              <div className="relative mx-auto aspect-[4/3] max-w-xs overflow-hidden rounded-xl border border-white/10 shadow-2xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80"
-                  alt="Personalized Collection"
-                  className="h-full w-full object-cover"
-                  onError={handleImageError}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 text-left">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300">
-                    Miracle Signature
-                  </span>
-                  <p className="text-xs font-bold text-white">
-                    Premium Clothing & Footwear
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -308,89 +242,8 @@ export function AuthenticatedHome({ user }: { user: User }) {
         </div>
       </section>
 
-      {/* 4. Shop by Category (Strictly Clothing & Footwear) */}
-      <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
-        <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-100">
-                <Layers size={17} className="text-black" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Core Collections
-              </span>
-            </div>
-            <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
-              Shop by Category
-            </h2>
-            <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
-              Explore our signature catalog across premium apparel and handcrafted footwear.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Clothing Card */}
-          <Link
-            href="/products?category=clothing"
-            className="group relative flex min-h-[300px] flex-col justify-end overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 p-6 text-white shadow-md transition-shadow hover:shadow-xl sm:p-8"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=800&q=80"
-              alt="Clothing Collection"
-              onError={handleImageError}
-              className="absolute inset-0 h-full w-full object-cover opacity-60 transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-            <div className="relative z-10">
-              <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-md">
-                24+ Live Styles
-              </span>
-              <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
-                Clothing Collection
-              </h3>
-              <p className="mt-1 text-xs text-neutral-200 sm:text-sm">
-                Kurtis, Sarees, Oxford Shirts, T-Shirts, Denims & Festive Sets.
-              </p>
-              <div className="mt-4 flex items-center gap-2 text-sm font-bold text-white group-hover:underline">
-                Explore Clothing <ArrowRight size={16} />
-              </div>
-            </div>
-          </Link>
-
-          {/* Footwear Card */}
-          <Link
-            href="/products?category=footwear"
-            className="group relative flex min-h-[300px] flex-col justify-end overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 p-6 text-white shadow-md transition-shadow hover:shadow-xl sm:p-8"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80"
-              alt="Footwear Collection"
-              onError={handleImageError}
-              className="absolute inset-0 h-full w-full object-cover opacity-60 transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-            <div className="relative z-10">
-              <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-md">
-                16+ Live Styles
-              </span>
-              <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
-                Footwear Collection
-              </h3>
-              <p className="mt-1 text-xs text-neutral-200 sm:text-sm">
-                Minimal Sneakers, Ethnic Juttis, Leather Brogues & Wedge Sandals.
-              </p>
-              <div className="mt-4 flex items-center gap-2 text-sm font-bold text-white group-hover:underline">
-                Explore Footwear <ArrowRight size={16} />
-              </div>
-            </div>
-          </Link>
-        </div>
-      </section>
+      {/* 4. Shop by Category (Identical to Homepage CategorySection) */}
+      <CategorySection />
 
       {/* 5. New Arrivals */}
       <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
@@ -470,6 +323,9 @@ export function AuthenticatedHome({ user }: { user: User }) {
           </div>
         </div>
       </section>
+
+      {/* Watch & Discover Video Showcase (Member stream unlocked) */}
+      <VideoShowcase />
 
       {/* 7. Personalized Account Quick Actions */}
       <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
