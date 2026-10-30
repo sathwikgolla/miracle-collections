@@ -728,13 +728,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         if (result.data) replaceOrder(result.data);
         else setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, paymentStatus: "Verified" as const } : o)));
         logAudit("Payments", "Verify", `Verified payment ${paymentId} for order ${orderId}`);
+        notifyAdminTabs();
         adminToast("Payment verified", "success");
       } else {
         adminToast(result.error || "Failed to verify payment", "error");
       }
       return result.success;
     },
-    [currentStaff, logAudit, adminToast, replaceOrder]
+    [currentStaff, logAudit, adminToast, replaceOrder, notifyAdminTabs]
   );
 
   const rejectPayment = useCallback(
@@ -747,13 +748,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         if (result.data) replaceOrder(result.data);
         else setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, paymentStatus: "Failed" as const } : o)));
         logAudit("Payments", "Reject", `Rejected payment ${paymentId} for order ${orderId}: ${reason}`);
+        notifyAdminTabs();
         adminToast("Payment rejected", "error");
       } else {
         adminToast(result.error || "Failed to reject payment", "error");
       }
       return result.success;
     },
-    [logAudit, adminToast, replaceOrder]
+    [logAudit, adminToast, replaceOrder, notifyAdminTabs]
   );
 
   /**

@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -24,7 +25,7 @@ import type {
   Toast,
   User,
 } from "@/lib/types";
-import { getAvailableStock, uid } from "@/lib/utils";
+import { getAvailableStock, uid, formatPrice } from "@/lib/utils";
 import { getCurrentUser, signIn, signOut, signUp, getUserProfile } from "@/lib/supabase/auth";
 import { getProductsForCards, getProductById as fetchProductById } from "@/lib/supabase/products-light";
 import { getCategories, type SubcategoryOption } from "@/lib/supabase/categories";
@@ -32,9 +33,10 @@ import { buildSubcategoryOptions } from "@/lib/catalogTaxonomy";
 import { getCart, addToCart as addToCartSupabase, updateCartItem as updateCartItemSupabase, removeFromCart as removeFromCartSupabase, clearCart as clearCartSupabase } from "@/lib/supabase/cart";
 import { getWishlist, addToWishlist as addToWishlistSupabase, removeFromWishlist as removeFromWishlistSupabase, toggleWishlist as toggleWishlistSupabase } from "@/lib/supabase/wishlist";
 import { getOrders, getOrderById } from "@/lib/supabase/orders";
-import { placeOrderSecure, cancelOrderSecure, submitOrderPaymentUtr } from "@/app/actions/orders";
+import { placeOrderSecure, cancelOrderSecure, submitOrderPaymentUtr, getMyPaymentVerifications } from "@/app/actions/orders";
 import { getAddresses, addAddress as addAddressSupabase, updateAddress as updateAddressSupabase, deleteAddress as deleteAddressSupabase } from "@/lib/supabase/addresses";
 import { products as fallbackProducts } from "@/data/products";
+import { categories as fallbackCategories } from "@/data/categories";
 
 interface StoreValue {
   // Core
@@ -183,8 +185,8 @@ const SEED_NOTIFICATIONS: AppNotification[] = [
 export function StoreProvider({ children }: { children: ReactNode }) {
   // Supabase-backed state
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
+  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
+  const [subcategories, setSubcategories] = useState<SubcategoryOption[]>(buildSubcategoryOptions(fallbackCategories));
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -204,6 +206,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [returns, setReturns, returnsHydrated] = useLocalStorage<Record<string, ReturnRecord>>("saara:returns", {});
   const [theme, setTheme, themeHydrated] = useLocalStorage<Theme>("saara:theme", "light");
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const toast = useCallback((message: string, type: Toast["type"] = "success") => {
+    const id = uid();
+    setToasts((t) => [...t, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((t) => t.filter((toast) => toast.id !== id));
+    }, 2800);
+  }, []);
 
   // ----------------------------------------------------------------
   // Refresh primitives (exposed to the UI and reused by the admin panel)
@@ -294,12 +304,156 @@ export function StoreProvider({ children }: { children: ReactNode }) {
    * without an explicit revalidation the tracking page would keep showing the
    * status it captured at load. This touches orders only, never the catalog.
    */
+  const knownOrderPaymentStatusesRef = useRef<Map<string, string>>(new Map());
+  const knownVerifStatusesRef = useRef<Map<string, string>>(new Map());
+  const initialOrdersLoadDoneRef = useRef(false);
+
+  // Reset tracking when user identity changes
+  useEffect(() => {
+    initialOrdersLoadDoneRef.current = false;
+    knownOrderPaymentStatusesRef.current.clear();
+    knownVerifStatusesRef.current.clear();
+  }, [user?.id]);
+
+  /**
+   * Re-read the signed-in user's orders and detect payment verification updates.
+   * When an admin verifies a payment, this automatically creates an in-app
+   * notification in the navbar bell and triggers a real-time toast alert.
+   */
   const refreshOrders = useCallback(async () => {
     if (!user) return null;
-    const ordersData = await getOrders(user.id);
-    if (ordersData) setOrders(ordersData);
-    return ordersData;
-  }, [user]);
+
+    try {
+      const [ordersData, verifsRes] = await Promise.all([
+        getOrders(user.id),
+        getMyPaymentVerifications().catch(() => null),
+      ]);
+
+      if (ordersData) {
+        setOrders(ordersData);
+
+        if (!initialOrdersLoadDoneRef.current) {
+          // First load of this session: catalog current statuses quietly so we don't spam toasts
+          ordersData.forEach((order) => {
+            knownOrderPaymentStatusesRef.current.set(order.id, order.paymentStatus);
+            if (order.paymentStatus === "Verified") {
+              const notifId = `notif-payment-verified-${order.id}`;
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === notifId)) return prev;
+                return [
+                  {
+                    id: notifId,
+                    type: "order",
+                    title: "Payment Verified",
+                    message: `Your payment of ${formatPrice(order.total)} for Order #${order.id.slice(0, 8)} has been verified successfully. Your order is confirmed!`,
+                    time: "Recently",
+                    read: false,
+                  },
+                  ...prev,
+                ];
+              });
+            }
+          });
+
+          if (verifsRes?.success && verifsRes.data) {
+            verifsRes.data.forEach((v) => {
+              knownVerifStatusesRef.current.set(v.id, v.status);
+            });
+          }
+
+          initialOrdersLoadDoneRef.current = true;
+        } else {
+          // Live updates — detect newly verified orders!
+          for (const order of ordersData) {
+            const prevStatus = knownOrderPaymentStatusesRef.current.get(order.id);
+            const isNewlyVerified = order.paymentStatus === "Verified" && prevStatus !== "Verified";
+
+            if (isNewlyVerified) {
+              knownOrderPaymentStatusesRef.current.set(order.id, "Verified");
+              const notifId = `notif-payment-verified-${order.id}`;
+              const orderShortId = order.id.slice(0, 8);
+
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === notifId)) return prev;
+                return [
+                  {
+                    id: notifId,
+                    type: "order",
+                    title: "Payment Verified",
+                    message: `Your payment of ${formatPrice(order.total)} for Order #${orderShortId} has been verified successfully. Your order is confirmed!`,
+                    time: "Just now",
+                    read: false,
+                  },
+                  ...prev,
+                ];
+              });
+
+              toast(`Payment verified for order #${orderShortId}! Your order has been placed.`, "success");
+            } else if (order.paymentStatus === "Failed" && prevStatus !== "Failed") {
+              knownOrderPaymentStatusesRef.current.set(order.id, "Failed");
+              const notifId = `notif-payment-failed-${order.id}`;
+              const orderShortId = order.id.slice(0, 8);
+
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === notifId)) return prev;
+                return [
+                  {
+                    id: notifId,
+                    type: "order",
+                    title: "Payment Verification Failed",
+                    message: `Payment verification for Order #${orderShortId} failed. Please review your details or contact support.`,
+                    time: "Just now",
+                    read: false,
+                  },
+                  ...prev,
+                ];
+              });
+
+              toast(`Payment verification failed for order #${orderShortId}`, "error");
+            } else {
+              knownOrderPaymentStatusesRef.current.set(order.id, order.paymentStatus);
+            }
+          }
+
+          // Check for rejected pre-order payment verifications
+          if (verifsRes?.success && verifsRes.data) {
+            for (const v of verifsRes.data) {
+              const prevVerifStatus = knownVerifStatusesRef.current.get(v.id);
+              if (v.status === "rejected" && prevVerifStatus !== "rejected") {
+                knownVerifStatusesRef.current.set(v.id, "rejected");
+                const notifId = `notif-verif-rejected-${v.id}`;
+                const reason = v.rejectionReason || "Invalid payment reference";
+
+                setNotifications((prev) => {
+                  if (prev.some((n) => n.id === notifId)) return prev;
+                  return [
+                    {
+                      id: notifId,
+                      type: "order",
+                      title: "Payment Rejected",
+                      message: `Your payment reference (UTR ${v.utrNumber}) was rejected: ${reason}`,
+                      time: "Just now",
+                      read: false,
+                    },
+                    ...prev,
+                  ];
+                });
+
+                toast(`Payment verification rejected: ${reason}`, "error");
+              } else {
+                knownVerifStatusesRef.current.set(v.id, v.status);
+              }
+            }
+          }
+        }
+      }
+
+      return ordersData;
+    } catch (err) {
+      console.error("refreshOrders error:", err);
+      return null;
+    }
+  }, [user, toast, setNotifications]);
 
   // Load initial data from Supabase
   useEffect(() => {
@@ -351,19 +505,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
+
+    // Cross-tab real-time sync: when an admin verifies payment in another tab,
+    // notify this tab immediately via BroadcastChannel
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel("miracle_admin_sync");
+      channel.onmessage = () => {
+        void refreshOrders();
+      };
+    } catch {
+      // BroadcastChannel not available in all environments
+    }
+
+    // Auto-poll every 4 seconds to ensure the customer receives the verification notification promptly
+    const pollInterval = window.setInterval(() => {
+      if (typeof document === "undefined" || document.visibilityState === "visible") {
+        void refreshOrders();
+      }
+    }, 4000);
+
     return () => {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
+      if (channel) channel.close();
+      window.clearInterval(pollInterval);
     };
   }, [user, refreshOrders]);
-
-  const toast = useCallback((message: string, type: Toast["type"] = "success") => {
-    const id = uid();
-    setToasts((t) => [...t, { id, message, type }]);
-    window.setTimeout(() => {
-      setToasts((t) => t.filter((toast) => toast.id !== id));
-    }, 2800);
-  }, []);
 
   // Theme side effect
   useEffect(() => {

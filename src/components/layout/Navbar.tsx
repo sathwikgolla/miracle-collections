@@ -290,6 +290,7 @@ export function Navbar() {
 
         {/* Category nav (horizontal scroll on mobile) */}
         <nav
+          suppressHydrationWarning
           className={cn(
             "no-scrollbar flex w-full items-center justify-between py-2 sm:w-auto sm:justify-start sm:gap-4 lg:gap-6",
             // Keep the dropdown unclipped on hover devices; scroll horizontally on touch if needed.

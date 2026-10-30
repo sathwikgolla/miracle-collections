@@ -458,17 +458,59 @@ function CheckoutInner() {
               </div>
 
               {payment === "upi" && (
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-sm font-medium text-black">UPI ID</label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="username@upi" className={input} />
-                    <Button
-                      variant="outline"
-                      className="shrink-0 w-full sm:w-auto"
-                      onClick={() => (upiId.trim() ? toast("UPI verified") : toast("Enter a valid UPI ID", "error"))}
-                    >
-                      Verify UPI
-                    </Button>
+                <div className="mt-4 space-y-4">
+                  {/* Payment QR Code & Phone Number Box */}
+                  <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                      <div className="relative shrink-0 overflow-hidden rounded-xl border border-neutral-300 bg-black p-2 shadow-xs">
+                        <img
+                          src="/upi-qr.png"
+                          alt="UPI Payment QR Code"
+                          className="h-40 w-40 rounded-lg object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 text-center sm:text-left space-y-2">
+                        <span className="inline-block rounded-full bg-black px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                          Scan & Pay
+                        </span>
+                        <div>
+                          <p className="text-xs text-neutral-500 font-medium">Payment Number / UPI:</p>
+                          <div className="mt-0.5 flex items-center justify-center sm:justify-start gap-2">
+                            <span className="text-xl sm:text-2xl font-black tracking-tight text-black font-mono">
+                              9346277009
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText("9346277009");
+                                toast("Payment number copied: 9346277009");
+                              }}
+                              className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-neutral-600 leading-relaxed">
+                          Scan the QR code using PhonePe, Google Pay, Paytm, or any UPI app, or pay directly to{" "}
+                          <span className="font-bold text-black font-mono">9346277009</span>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-black">UPI ID</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="username@upi" className={input} />
+                      <Button
+                        variant="outline"
+                        className="shrink-0 w-full sm:w-auto"
+                        onClick={() => (upiId.trim() ? toast("UPI verified") : toast("Enter a valid UPI ID", "error"))}
+                      >
+                        Verify UPI
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
