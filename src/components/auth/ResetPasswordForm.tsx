@@ -1,119 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
 import { passwordErrors } from "@/lib/utils";
 
-type View = "checking" | "form" | "done" | "tokenError";
+type View = "form" | "done" | "tokenError";
+
+type UpdatePasswordResult =
+  | { success: true }
+  | { success: false; error: string; field: "password" | "form" | "link" };
 
 /**
- * Reads the error Supabase appends when a recovery link is expired, invalid,
- * already used, or malformed — from either the query string (PKCE) or the
- * hash fragment (implicit) — so we can explain it in friendly language.
+ * Final step of the recovery flow.
+ *
+ * Whether this form is allowed to render at all is decided on the server
+ * (`/reset-password` page + `src/proxy.ts`): the emailed Supabase recovery
+ * code must have been verified server-side and be bound to the signed-in
+ * account. This component never treats a pre-existing session as proof of a
+ * recovery, which is what previously allowed the wrong account to be updated.
+ *
+ * The update itself runs in the `/api/auth/update-password` route handler,
+ * which validates the password, calls Supabase Auth's `updateUser`, and
+ * confirms the new password by signing in with it before reporting success.
  */
-function readTokenError(): string | null {
-  if (typeof window === "undefined") return null;
-  const sp = new URLSearchParams(window.location.search);
-  const hp = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const raw =
-    sp.get("error_description") ||
-    hp.get("error_description") ||
-    sp.get("error") ||
-    hp.get("error");
-  if (!raw) return null;
-  const m = decodeURIComponent(raw).toLowerCase();
-  if (m.includes("otp") || m.includes("expired") || m.includes("invalid") || m.includes("hash")) {
-    return "This password reset link is invalid or has expired. Reset links can only be used once and expire after a short time.";
-  }
-  return "We couldn't verify this password reset link. Please request a new one.";
-}
-
-/**
- * Final step of the recovery flow: prove a valid recovery session exists
- * (the emailed link established it), then update the password through
- * Supabase Auth. The password never touches our database or any plaintext
- * store — `updateUser` hashes it inside Supabase Auth.
- */
-export function ResetPasswordForm() {
-  const [view, setView] = useState<View>("checking");
-  const [tokenError, setTokenError] = useState<string | null>(null);
+export function ResetPasswordForm({ initialError = null }: { initialError?: string | null }) {
+  const router = useRouter();
+  const [view, setView] = useState<View>(initialError ? "tokenError" : "form");
+  const [tokenError, setTokenError] = useState<string | null>(initialError);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ password?: string[]; confirm?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, startTransition] = useTransition();
 
+  // After a confirmed update, send the customer to login so they sign in with
+  // the password that was just proven to work.
   useEffect(() => {
-    let cancelled = false;
-    // Grace period: the Supabase browser client processes the link's tokens
-    // (hash fragment or ?code=) shortly after mount, which fires
-    // PASSWORD_RECOVERY on the listener below — don't show an error before
-    // that had a chance to run.
-    let errorTimer: number | undefined;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-        if (!cancelled) {
-          window.clearTimeout(errorTimer);
-          setTokenError(null);
-          setView("form");
-        }
-      }
-    });
-
-    (async () => {
-      try {
-        // 1) Already-established session (the browser client auto-detects the
-        //    emailed tokens on load — implicit #access_token or PKCE ?code=).
-        const { data } = await supabase.auth.getSession();
-        if (cancelled) return;
-        if (data.session) {
-          setView("form");
-          return;
-        }
-
-        // 2) PKCE fallback: exchange an un-consumed ?code= explicitly.
-        const code = new URLSearchParams(window.location.search).get("code");
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (!cancelled && !error) {
-            setView("form");
-            return;
-          }
-        }
-
-        // 3) Neither worked: surface the link's own error if present, else
-        //    wait briefly for a late PASSWORD_RECOVERY before giving up.
-        const immediate = readTokenError();
-        if (immediate) {
-          setTokenError(immediate);
-          setView("tokenError");
-          return;
-        }
-        errorTimer = window.setTimeout(() => {
-          if (cancelled) return;
-          setTokenError(
-            "We couldn't verify this password reset link. It may be expired, already used, or opened in a different browser. Please request a new one."
-          );
-          setView("tokenError");
-        }, 1500);
-      } catch {
-        if (!cancelled) {
-          setTokenError("Something went wrong while verifying the link. Please request a new one.");
-          setView("tokenError");
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(errorTimer);
-      subscription.unsubscribe();
-    };
-  }, []);
+    if (view !== "done") return;
+    const timer = window.setTimeout(() => router.replace("/login?reset=success"), 2200);
+    return () => window.clearTimeout(timer);
+  }, [view, router]);
 
   const validate = () => {
     const e: { password?: string[]; confirm?: string } = {};
@@ -129,48 +58,55 @@ export function ResetPasswordForm() {
     ev.preventDefault();
     if (!validate()) return;
     setFormError(null);
-    setPending(true);
-    (async () => {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) {
-        const m = (error.message ?? "").toLowerCase();
-        if (m.includes("different from")) {
-          setErrors({ password: ["Choose a password different from your current one"] });
-        } else if (m.includes("should be at least") || m.includes("at least 6")) {
-          setErrors({ password: ["Must be at least 8 characters"] });
-        } else if (
-          m.includes("jwt") ||
-          m.includes("token") ||
-          m.includes("session") ||
-          m.includes("expired")
-        ) {
-          setView("tokenError");
-          setTokenError(
-            "This password reset link is invalid or has expired. Please request a new one."
+    startTransition(async () => {
+      try {
+        // Route handler (not a Server Action) so the password is never written
+        // into Server Action arguments/dev logs.
+        const response = await fetch("/api/auth/update-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          cache: "no-store",
+          body: JSON.stringify({ password, confirmPassword: confirm }),
+        });
+
+        const result = (await response.json().catch(() => null)) as
+          | UpdatePasswordResult
+          | null;
+
+        if (!result) {
+          setFormError(
+            "We couldn't reach the server. Check your connection and try again."
           );
-        } else {
-          setFormError("We couldn't update your password. Please try again.");
+          return;
         }
-        return;
+
+        if (!result.success) {
+          if (result.field === "link") {
+            setTokenError(result.error);
+            setView("tokenError");
+          } else if (result.field === "password") {
+            setErrors({ password: [result.error] });
+          } else {
+            setFormError(result.error);
+          }
+          return;
+        }
+
+        setPassword("");
+        setConfirm("");
+        setView("done");
+      } catch {
+        setFormError(
+          "We couldn't reach the server. Check your connection and try again."
+        );
       }
-      // Drop the consumed tokens from the address bar (single-use links)…
-      window.history.replaceState({}, "", "/reset-password");
-      setView("done");
-    })().finally(() => setPending(false));
+    });
   };
 
   const inputCls =
     "h-12 w-full rounded-md border border-neutral-300 bg-white px-3.5 text-sm text-black outline-none transition-colors focus:border-black";
   const labelCls = "mb-1.5 block text-sm font-medium text-black";
-
-  if (view === "checking") {
-    return (
-      <div className="w-full rounded-2xl border border-neutral-200 bg-white p-6 text-center sm:p-8">
-        <Loader2 size={24} className="mx-auto animate-spin text-black" />
-        <p className="mt-4 text-sm text-neutral-600">Verifying your reset link…</p>
-      </div>
-    );
-  }
 
   if (view === "tokenError") {
     return (
@@ -213,10 +149,10 @@ export function ResetPasswordForm() {
         </h1>
         <p className="mt-2 text-center text-sm leading-relaxed text-neutral-600">
           Your password has been changed successfully. You can now sign in with your new
-          password.
+          password. Taking you to the login page…
         </p>
         <Link
-          href="/login"
+          href="/login?reset=success"
           className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-black text-sm font-bold text-white transition-colors hover:bg-neutral-800"
         >
           Continue to login
