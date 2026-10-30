@@ -6,6 +6,7 @@ import { ArrowRight, BadgePercent, Check, Copy, Sparkles, Tag, Truck } from "luc
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/product/ProductCard";
 import { discountPercent } from "@/lib/utils";
+import type { AdminDealsConfig } from "@/lib/homepageTypes";
 
 const ACTIVE_COUPONS = [
   {
@@ -46,7 +47,7 @@ const ACTIVE_COUPONS = [
   },
 ];
 
-export function DealsAndOffers() {
+export function DealsAndOffers({ config }: { config?: AdminDealsConfig } = {}) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const { products } = useStore();
 
@@ -63,8 +64,48 @@ export function DealsAndOffers() {
     .filter((p) => discountPercent(p.mrp, p.price) >= 50 && p.stock > 0)
     .slice(0, 4);
 
+  const badgeText = config?.badge || "Exclusive Savings";
+  const titleText = config?.title || "Offers & Deals";
+  const subtitleText = config?.subtitle || "Active discount coupons & limited markdown prices applied at checkout";
+
   return (
     <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
+      {/* Optional Admin Featured Deals Banner */}
+      {config?.bannerTitle && (
+        <div className="mb-8 rounded-2xl border border-neutral-200 bg-gradient-to-r from-neutral-900 via-neutral-800 to-black p-5 text-white shadow-md sm:p-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="space-y-1">
+              {config.bannerTag && (
+                <span className="inline-block rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-amber-300 uppercase">
+                  {config.bannerTag}
+                </span>
+              )}
+              <h3 className="text-lg font-black tracking-tight sm:text-xl">{config.bannerTitle}</h3>
+              {config.bannerSubtitle && (
+                <p className="text-xs text-neutral-300">{config.bannerSubtitle}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {config.bannerCode && (
+                <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur-xs">
+                  <span className="text-[10px] text-neutral-300 uppercase">Use Code:</span>
+                  <span className="font-mono text-xs font-black tracking-wider text-amber-300">{config.bannerCode}</span>
+                </div>
+              )}
+              {config.bannerLink && (
+                <Link
+                  href={config.bannerLink}
+                  className="inline-flex items-center gap-1 rounded-xl bg-white px-4 py-2 text-xs font-bold text-black transition hover:bg-neutral-100"
+                >
+                  <span>Claim Offer</span>
+                  <ArrowRight size={13} />
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Section Header */}
       <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
         <div>
@@ -73,14 +114,14 @@ export function DealsAndOffers() {
               <BadgePercent size={18} className="text-black" />
             </span>
             <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-              Exclusive Savings
+              {badgeText}
             </span>
           </div>
           <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
-            Offers & Deals
+            {titleText}
           </h2>
           <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
-            Active discount coupons & limited markdown prices applied at checkout
+            {subtitleText}
           </p>
         </div>
         <Link

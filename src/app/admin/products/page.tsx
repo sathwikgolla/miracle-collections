@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useAdmin } from "@/context/AdminContext";
-import { formatPrice, getProductTotalStock } from "@/lib/utils";
+import { formatPrice, getProductTotalStock, handleImageError } from "@/lib/utils";
 import type { AdminProduct } from "@/lib/adminTypes";
 import { ProductEditModal } from "@/components/admin/ProductEditModal";
 
@@ -212,6 +212,7 @@ function AdminProductsContent() {
                   <img
                     src={p.images[0]}
                     alt={p.name}
+                    onError={handleImageError}
                     className="h-16 w-16 rounded-lg object-cover border border-neutral-200 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
@@ -332,6 +333,7 @@ function AdminProductsContent() {
                           <img
                             src={p.images[0]}
                             alt={p.name}
+                            onError={handleImageError}
                             className="h-12 w-12 rounded-lg object-cover border border-neutral-200 shrink-0"
                           />
                           <div>

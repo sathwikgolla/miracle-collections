@@ -195,7 +195,7 @@ export default function ProfilePage() {
           <div className="space-y-6">
             <div className="rounded-lg border border-neutral-200 bg-white p-5 text-center">
               <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-black text-2xl font-bold text-white">
-                {user?.name.charAt(0).toUpperCase()}
+                {user?.name ? user.name.trim().charAt(0).toUpperCase() : "U"}
               </span>
               <h2 className="mt-3 text-lg font-bold text-black">{user?.name}</h2>
               <p className="flex items-center justify-center gap-1.5 text-sm text-neutral-500">

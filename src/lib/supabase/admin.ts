@@ -665,25 +665,55 @@ export async function saveYoutubeVideo(
     const now = new Date().toISOString();
     const id = video.id || `VID-${Date.now()}`;
 
-    const { data, error } = await adminSupabase
+    const payload: Record<string, any> = {
+      id,
+      title: video.title,
+      video_id: video.videoId,
+      thumbnail: video.thumbnail,
+      duration: video.duration,
+      views: video.views,
+      active: video.active ?? true,
+      updated_at: now,
+    };
+    if (video.url) payload.url = video.url;
+    if (video.description) payload.description = video.description;
+    if (video.tag) payload.tag = video.tag;
+
+    let { data, error } = await adminSupabase
       .from('youtube_videos')
-      .upsert({
-        id,
-        title: video.title,
-        video_id: video.videoId,
-        thumbnail: video.thumbnail,
-        duration: video.duration,
-        views: video.views,
-        active: video.active,
-        created_at: now,
-        updated_at: now,
-      })
+      .upsert({ ...payload, created_at: now })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error && error.code === '42703') {
+      const { data: retryData, error: retryError } = await adminSupabase
+        .from('youtube_videos')
+        .upsert({
+          id,
+          title: video.title,
+          video_id: video.videoId,
+          thumbnail: video.thumbnail,
+          duration: video.duration,
+          views: video.views,
+          active: video.active ?? true,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+      if (retryError) throw retryError;
+      data = retryData;
+    } else if (error) {
+      throw error;
+    }
 
-    return transformYoutubeVideo(data);
+    const transformed = transformYoutubeVideo(data);
+    return {
+      ...transformed,
+      url: video.url || transformed.url,
+      description: video.description !== undefined ? video.description : transformed.description,
+      tag: video.tag || transformed.tag,
+    };
   } catch (error) {
     console.error('Error saving YouTube video:', error);
     return null;
@@ -1022,6 +1052,9 @@ function transformYoutubeVideo(data: any): YouTubeVideoItem {
     id: data.id,
     title: data.title,
     videoId: data.video_id,
+    url: data.url || (data.video_id ? `https://youtube.com/shorts/${data.video_id}` : undefined),
+    description: data.description || '',
+    tag: data.tag || 'Collection',
     thumbnail: data.thumbnail,
     duration: data.duration,
     views: data.views,

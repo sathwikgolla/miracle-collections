@@ -1,0 +1,484 @@
+{
+  "sections": [
+    {
+      "id": "hero",
+      "name": "Hero Carousel Banners",
+      "description": "Full-width promotional slider and spotlight cards",
+      "enabled": true,
+      "order": 1
+    },
+    {
+      "id": "categories",
+      "name": "Shop By Category",
+      "description": "Curated dual-item cards for women, men, kids & footwear",
+      "enabled": true,
+      "order": 2
+    },
+    {
+      "id": "quick-benefits",
+      "name": "Quick Benefits / Trust Strip",
+      "description": "Store credibility indicators like genuine quality and fast delivery",
+      "enabled": true,
+      "order": 3
+    },
+    {
+      "id": "trending",
+      "name": "Trending Now",
+      "description": "Dynamic product grid displaying high-demand fashion styles",
+      "enabled": true,
+      "order": 4
+    },
+    {
+      "id": "spotlight",
+      "name": "In The Spotlight",
+      "description": "Horizontal product cards featuring marquee collections",
+      "enabled": true,
+      "order": 5
+    },
+    {
+      "id": "deals",
+      "name": "Deals & Offers",
+      "description": "Storewide discount codes, promotional banner & instant coupons",
+      "enabled": true,
+      "order": 6
+    },
+    {
+      "id": "editorial",
+      "name": "Editorial Fashion Campaign",
+      "description": "Rich magazine-style fashion storytelling with multi-image collage",
+      "enabled": true,
+      "order": 7
+    },
+    {
+      "id": "occasions",
+      "name": "Shop By Occasion",
+      "description": "Lifestyle-based occasion cards: Casual, Office, Festive & Party",
+      "enabled": true,
+      "order": 8
+    },
+    {
+      "id": "discovery",
+      "name": "Popular Picks & Discovery",
+      "description": "Customer favorites, top-rated products & recently viewed items",
+      "enabled": true,
+      "order": 9
+    },
+    {
+      "id": "budget",
+      "name": "Shop By Budget",
+      "description": "Price tier navigation: Under ₹499, ₹999, ₹1,499 & Luxury",
+      "enabled": true,
+      "order": 10
+    },
+    {
+      "id": "videos",
+      "name": "YouTube Video Showcase",
+      "description": "Watch & Discover video reels posted from your YouTube channel",
+      "enabled": true,
+      "order": 11
+    },
+    {
+      "id": "why-us",
+      "name": "Why Shop With Us",
+      "description": "5 value pillars emphasizing quality, returns & customer support",
+      "enabled": true,
+      "order": 12
+    },
+    {
+      "id": "final-cta",
+      "name": "Final Call To Action",
+      "description": "Bottom conversion strip with direct buttons to all collections",
+      "enabled": true,
+      "order": 13
+    }
+  ],
+  "categoryGroups": [
+    {
+      "id": "grp-royal-ethnic",
+      "title": "Royal Ethnic & Festive",
+      "href": "/products?category=clothing",
+      "order": 1,
+      "active": true,
+      "items": [
+        {
+          "name": "Kurta Sets",
+          "href": "/products?category=clothing&subcategory=kurta-sets",
+          "image": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=400&q=80"
+        },
+        {
+          "name": "Silk Sarees",
+          "href": "/products?category=clothing&subcategory=sarees",
+          "image": "/images/products/saree-1584-purple-model.jpg"
+        }
+      ]
+    },
+    {
+      "id": "grp-contemporary-women",
+      "title": "Contemporary Styles",
+      "href": "/products?category=clothing&gender=women",
+      "order": 2,
+      "active": true,
+      "items": [
+        {
+          "name": "Dresses",
+          "href": "/products?category=clothing&subcategory=dresses",
+          "image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=400&q=80"
+        },
+        {
+          "name": "Chic Tops",
+          "href": "/products?category=clothing&subcategory=tops",
+          "image": "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=400&q=80"
+        }
+      ]
+    },
+    {
+      "id": "grp-mens-sartorial",
+      "title": "Men's Sartorial Edit",
+      "href": "/products?category=clothing&gender=men",
+      "order": 3,
+      "active": true,
+      "items": [
+        {
+          "name": "Oxford Shirts",
+          "href": "/products?category=clothing&subcategory=shirts",
+          "image": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=400&q=80"
+        },
+        {
+          "name": "Cotton Tees",
+          "href": "/products?category=clothing&subcategory=t-shirts",
+          "image": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80"
+        }
+      ]
+    },
+    {
+      "id": "grp-artisanal-footwear",
+      "title": "Artisanal Footwear",
+      "href": "/products?category=footwear",
+      "order": 4,
+      "active": true,
+      "items": [
+        {
+          "name": "Sneakers",
+          "href": "/products?category=footwear&subcategory=sneakers",
+          "image": "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=400&q=80"
+        },
+        {
+          "name": "Leather Loafers",
+          "href": "/products?category=footwear&subcategory=loafers",
+          "image": "https://images.unsplash.com/photo-1582588678413-dbf45f4823e9?auto=format&fit=crop&w=400&q=80"
+        }
+      ]
+    },
+    {
+      "id": "grp-heritage-kids",
+      "title": "Heritage & Little Ones",
+      "href": "/products?category=clothing&gender=kids",
+      "order": 5,
+      "active": true,
+      "items": [
+        {
+          "name": "Ethnic Juttis",
+          "href": "/products?category=footwear&subcategory=mojris",
+          "image": "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=400&q=80"
+        },
+        {
+          "name": "Kids' Collection",
+          "href": "/products?category=clothing&gender=kids",
+          "image": "https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=400&q=80"
+        }
+      ]
+    }
+  ],
+  "spotlightItems": [
+    {
+      "id": "spotlight-saree-1584",
+      "brand": "MIRACLE",
+      "title": "Banarasi Zari Checkered Saree",
+      "subtitle": "D.No 1584 · With Matching Blouse Piece",
+      "price": 1899,
+      "image": "/images/products/saree-1584-purple-model.jpg",
+      "href": "/product/royal-banarasi-zari-checkered-saree-d-no-1584",
+      "order": 1,
+      "active": true
+    },
+    {
+      "id": "spotlight-saree-mysore",
+      "brand": "MIRACLE",
+      "title": "Mysore Butta Chit Pallu Saree",
+      "subtitle": "Mysore Silk · Peacock Gold Zari Border",
+      "price": 2199,
+      "image": "/images/products/saree-mysore-purple-green.jpg",
+      "href": "/product/mysore-butta-chit-pallu-purple-green-saree",
+      "order": 2,
+      "active": true
+    },
+    {
+      "id": "spotlight-saree-floral",
+      "brand": "MIRACLE",
+      "title": "Floral Hibiscus Festive Saree",
+      "subtitle": "Lightweight Silk Blend · Woven Zari Border",
+      "price": 1499,
+      "image": "/images/products/saree-floral-yellow.jpg",
+      "href": "/product/mustard-yellow-floral-hibiscus-zari-saree",
+      "order": 3,
+      "active": true
+    },
+    {
+      "id": "spotlight-saree-contrast",
+      "brand": "MIRACLE",
+      "title": "Traditional Zari Contrast Saree",
+      "subtitle": "Teal Blue & Mint Green · Geometric Butta",
+      "price": 1999,
+      "image": "/images/products/saree-contrast-teal-green.jpg",
+      "href": "/product/teal-blue-traditional-silk-saree-mint-green-border",
+      "order": 4,
+      "active": true
+    }
+  ],
+  "editorial": {
+    "badge": "Editorial Showcase · Season '26",
+    "headline": "The Symphony of Heritage & Modernity",
+    "tagline": "The Sovereign Edit — Harmonized silhouettes tailored for festive poise and daily splendour.",
+    "pullQuote": "True elegance lies in the quiet harmony of honest craftsmanship, breathable natural fibers, and timeless silhouettes.",
+    "description": "Our latest campaign celebrates the art of refined dressing. From flowing zari-embroidered anarkalis to tailored oxford shirts and hand-stitched leather footwear, every piece is curated to transition seamlessly from festive celebrations to everyday occasions.",
+    "bullets": [
+      "100% Pure Combed Cotton, Rayon & Silk Blends",
+      "Hand-finished Zari Embroidery & Artisanal Stitching",
+      "Tailored Contemporary Fits Designed for Modern Living",
+      "Direct Artisan Sourcing with Zero Intermediary Markups"
+    ],
+    "primaryImage": "/images/products/saree-1584-purple-model.jpg",
+    "primaryBadge": "Editorial · Autumn-Winter '26",
+    "primaryTitle": "The Sovereign Edit",
+    "primarySubtitle": "Harmonized silhouettes tailored for festive poise and daily splendour.",
+    "secondaryImage": "/images/products/saree-mysore-purple-green.jpg",
+    "secondaryTag": "Mysore Silk & Zari",
+    "secondaryTitle": "Chit Pallu Artistry",
+    "tertiaryImage": "/images/products/saree-floral-yellow.jpg",
+    "tertiaryTag": "Woven Gold Border",
+    "tertiaryTitle": "Festive Hibiscus Drape",
+    "ctaPrimaryText": "Explore Saree Weaves",
+    "ctaPrimaryLink": "/products?category=clothing&subcategory=sarees",
+    "ctaSecondaryText": "View Entire Lookbook",
+    "ctaSecondaryLink": "/products"
+  },
+  "occasions": [
+    {
+      "id": "occ-casual",
+      "title": "College & Casual",
+      "tagline": "Breathable tees, everyday denims & cool kicks",
+      "image": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=600&q=80",
+      "href": "/products?category=men",
+      "badge": "Everyday Fit",
+      "order": 1,
+      "active": true
+    },
+    {
+      "id": "occ-office",
+      "title": "Office & Workwear",
+      "tagline": "Elegant kurtis, crisp shirts & smart footwear",
+      "image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80",
+      "href": "/products?category=women",
+      "badge": "Formal & Smart",
+      "order": 2,
+      "active": true
+    },
+    {
+      "id": "occ-party",
+      "title": "Party & Celebrations",
+      "tagline": "Vibrant ethnic sets, heels & statement accents",
+      "image": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80",
+      "href": "/products?category=women",
+      "badge": "Festive Vibes",
+      "order": 3,
+      "active": true
+    },
+    {
+      "id": "occ-vacation",
+      "title": "Vacation & Weekend",
+      "tagline": "Relaxed jackets, canvas espadrilles & travel gear",
+      "image": "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=600&q=80",
+      "href": "/products?category=footwear",
+      "badge": "Holiday Ready",
+      "order": 4,
+      "active": true
+    },
+    {
+      "id": "occ-kids",
+      "title": "Kids' Festivities",
+      "tagline": "Cotton-silk kurta sets & adorable party frocks",
+      "image": "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?auto=format&fit=crop&w=600&q=80",
+      "href": "/products?category=kids",
+      "badge": "Little Smiles",
+      "order": 5,
+      "active": true
+    },
+    {
+      "id": "occ-active",
+      "title": "Active & Athleisure",
+      "tagline": "Comfort training sneakers, knit joggers & active fits",
+      "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80",
+      "href": "/products?category=footwear",
+      "badge": "Active Fit",
+      "order": 6,
+      "active": true
+    }
+  ],
+  "budgetTiers": [
+    {
+      "id": "budget-499",
+      "label": "Under ₹499",
+      "description": "Cotton t-shirts, basic tops, socks & everyday essentials",
+      "href": "/products?maxPrice=499",
+      "badge": "Budget Friendly",
+      "popular": "Pure Cotton Tees, Relaxed Tops",
+      "image": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+      "order": 1,
+      "active": true
+    },
+    {
+      "id": "budget-999",
+      "label": "Under ₹999",
+      "description": "Printed kurtis, casual footwear & kids festive sets",
+      "href": "/products?maxPrice=999",
+      "badge": "Sweet Spot",
+      "popular": "Anarkali Sets, Wedge Sandals",
+      "image": "https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=400&q=80",
+      "order": 2,
+      "active": true
+    },
+    {
+      "id": "budget-1499",
+      "label": "Under ₹1,499",
+      "description": "Denim jackets, casual sneakers & formal trousers",
+      "href": "/products?maxPrice=1499",
+      "badge": "Most Popular",
+      "popular": "Denim Outerwear, Walk Sneakers",
+      "image": "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=400&q=80",
+      "order": 3,
+      "active": true
+    },
+    {
+      "id": "budget-2499",
+      "label": "Under ₹2,499",
+      "description": "High-top boots, formal leather brogues & festive suits",
+      "href": "/products?maxPrice=2499",
+      "badge": "Premium Finds",
+      "popular": "Street Boots, Leather Brogues",
+      "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80",
+      "order": 4,
+      "active": true
+    }
+  ],
+  "whyUsItems": [
+    {
+      "id": "why-quality",
+      "title": "100% Quality Guaranteed",
+      "description": "Every clothing garment and footwear pair undergoes strict fabric, stitching, and finishing checks before dispatch.",
+      "iconName": "Award",
+      "order": 1,
+      "active": true
+    },
+    {
+      "id": "why-secure",
+      "title": "Secure & Encrypted Shopping",
+      "description": "Pay with complete confidence using verified UPI, credit/debit cards, net banking, or choose Cash on Delivery.",
+      "iconName": "ShieldCheck",
+      "order": 2,
+      "active": true
+    },
+    {
+      "id": "why-shipping",
+      "title": "Fast & Reliable Shipping",
+      "description": "Orders are dispatched within 24 hours with real-time SMS & WhatsApp tracking updates right to your doorstep.",
+      "iconName": "Truck",
+      "order": 3,
+      "active": true
+    },
+    {
+      "id": "why-returns",
+      "title": "Hassle-Free 7-Day Returns",
+      "description": "Didn't fit quite right? Schedule an effortless doorstep exchange or full refund with zero cancellation penalties.",
+      "iconName": "RefreshCw",
+      "order": 4,
+      "active": true
+    },
+    {
+      "id": "why-support",
+      "title": "Dedicated Single-Store Support",
+      "description": "Reach our in-house Miracle Collections customer support team directly for styling advice, order queries, or sizing help.",
+      "iconName": "HeadphonesIcon",
+      "order": 5,
+      "active": true
+    }
+  ],
+  "quickBenefits": [
+    {
+      "id": "qb-1",
+      "title": "100% Genuine Quality",
+      "subtitle": "Direct verified",
+      "iconName": "ShieldCheck",
+      "active": true
+    },
+    {
+      "id": "qb-2",
+      "title": "Fast Delivery",
+      "subtitle": "Free over ₹499",
+      "iconName": "Truck",
+      "active": true
+    },
+    {
+      "id": "qb-3",
+      "title": "7-Day Easy Returns",
+      "subtitle": "Doorstep pickup",
+      "iconName": "RefreshCw",
+      "active": true
+    },
+    {
+      "id": "qb-4",
+      "title": "Secure Payments",
+      "subtitle": "UPI, Cards & COD",
+      "iconName": "CreditCard",
+      "active": true
+    },
+    {
+      "id": "qb-5",
+      "title": "Dedicated Support",
+      "subtitle": "Instant help",
+      "iconName": "Headphones",
+      "active": true
+    }
+  ],
+  "trending": {
+    "badge": "Popular Demand",
+    "title": "Trending Now",
+    "subtitle": "Top customer favorites and most-coveted fashion pieces this week",
+    "viewAll": "/products?sort=popular"
+  },
+  "discovery": {
+    "badge": "Customer Favorites",
+    "title": "Popular Picks For You",
+    "subtitle": "Top customer-rated styles and footwear curated by our stylists",
+    "viewAll": "/products?sort=rating"
+  },
+  "deals": {
+    "badge": "Offers & Savings",
+    "title": "Special Offers & Coupons",
+    "subtitle": "Stack savings with instant checkout codes & seasonal rewards",
+    "bannerTag": "Limited Festive Run",
+    "bannerTitle": "Festive Wardrobe Extravaganza",
+    "bannerSubtitle": "Flat 10% Extra Savings on All Prepaid UPI & Card Checkouts",
+    "bannerCode": "FESTIVE10",
+    "bannerDiscount": "10% INSTANT",
+    "bannerLink": "/products"
+  },
+  "finalCta": {
+    "badge": "Your Fashion Journey Starts Here",
+    "title": "Ready to Upgrade Your Wardrobe?",
+    "description": "Discover curated looks for Women, Men, Kids, and Footwear tailored for every celebration and everyday lifestyle.",
+    "primaryBtnText": "Browse All Collections",
+    "primaryBtnLink": "/products",
+    "secondaryBtnText": "View Trending Now",
+    "secondaryBtnLink": "/products?sort=popular"
+  }
+}

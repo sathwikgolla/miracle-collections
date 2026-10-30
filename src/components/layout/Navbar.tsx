@@ -1,5 +1,17 @@
 "use client";
 
+function YouTubeBadgeIcon({ className = "h-3.5 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 18" fill="none">
+      <path
+        d="M23.498 3.186a3.016 3.016 0 0 0-2.122-2.136C19.505.545 12 .545 12 .545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 3.186C0 5.07 0 9 0 9s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 12.93 24 9 24 9s0-3.93-.502-5.814z"
+        fill="#FF0000"
+      />
+      <polygon points="9.5,5.5 16,9 9.5,12.5" fill="white" />
+    </svg>
+  );
+}
+
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -192,7 +204,7 @@ export function Navbar() {
                     className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold text-black hover:bg-neutral-100"
                   >
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-xs font-bold text-white">
-                      {currentUser.name.charAt(0).toUpperCase()}
+                      {currentUser.name ? currentUser.name.trim().charAt(0).toUpperCase() : "U"}
                     </span>
                     Hi, {currentUser.name.split(" ")[0]}
                     <ChevronDown size={14} className="text-neutral-400" />
@@ -279,9 +291,9 @@ export function Navbar() {
         {/* Category nav (horizontal scroll on mobile) */}
         <nav
           className={cn(
-            "no-scrollbar -mx-4 flex items-center gap-1 px-4 py-2 sm:mx-0 sm:px-0 lg:gap-2",
-            // Keep the dropdown unclipped on hover devices; scroll horizontally on touch.
-            canHover ? "overflow-visible" : "overflow-x-auto"
+            "no-scrollbar flex w-full items-center justify-between py-2 sm:w-auto sm:justify-start sm:gap-4 lg:gap-6",
+            // Keep the dropdown unclipped on hover devices; scroll horizontally on touch if needed.
+            canHover ? "overflow-visible" : "overflow-x-auto sm:overflow-visible"
           )}
         >
           <Link
@@ -314,6 +326,18 @@ export function Navbar() {
               canHover={canHover}
             />
           ))}
+          <Link
+            href="/videos"
+            className={cn(
+              "relative flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+              pathname === "/videos"
+                ? "font-bold text-black after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-black"
+                : "text-neutral-600 hover:text-black"
+            )}
+          >
+            <YouTubeBadgeIcon />
+            <span>YouTube</span>
+          </Link>
         </nav>
       </div>
 
@@ -402,6 +426,15 @@ export function Navbar() {
                   </div>
                 );
               })}
+
+              <Link
+                href="/videos"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-black hover:bg-neutral-50"
+              >
+                <YouTubeBadgeIcon className="h-4 w-4" />
+                <span>YouTube Videos</span>
+              </Link>
 
               <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                 My account

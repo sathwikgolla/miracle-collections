@@ -6,8 +6,9 @@ import { ArrowRight, HeartHandshake, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/product/ProductCard";
 import { RecentlyViewed } from "@/components/home/RecentlyViewed";
+import type { AdminDiscoveryConfig } from "@/lib/homepageTypes";
 
-export function PersonalizedDiscovery() {
+export function PersonalizedDiscovery({ config }: { config?: AdminDiscoveryConfig } = {}) {
   const { recentlyViewed, wishlist, cart, hydrated, products } = useStore();
 
   const getProductById = (id: string) => products.find((p: any) => p.id === id);
@@ -44,15 +45,15 @@ export function PersonalizedDiscovery() {
       const excludeIds = new Set([...viewed, ...wished, ...cartIds]);
       const matched = products
         .filter((p: any) => !excludeIds.has(p.id) && affinityCategories.has(p.categoryId))
-        .sort((a: any, b: any) => b.rating - a.rating)
+        .sort((a: any, b: any) => b.rating - a.rating || b.reviews - a.reviews)
         .slice(0, 4);
 
-      if (matched.length > 0) {
+      if (matched.length >= 4) {
         return { picks: matched, isPersonalized: true };
       }
     }
 
-    // Default for guest / new users: Popular picks
+    // Default popular styles
     const popularPicks = [...products]
       .filter((p: any) => p.rating >= 4.3)
       .sort((a: any, b: any) => b.reviews - a.reviews)
@@ -60,6 +61,13 @@ export function PersonalizedDiscovery() {
 
     return { picks: popularPicks, isPersonalized: false };
   }, [recentlyViewed, wishlist, cart, hydrated, products]);
+
+  const badgeText = isPersonalized ? "Tailored Just For You" : config?.badge || "Customer Favorites";
+  const titleText = isPersonalized ? "Picked For You" : config?.title || "Popular Picks For You";
+  const subtitleText = isPersonalized
+    ? "Recommendations based on categories and styles you love"
+    : config?.subtitle || "Top customer-rated styles and footwear curated by our stylists";
+  const viewAllLink = config?.viewAll || "/products?sort=rating";
 
   return (
     <div className="space-y-12">
@@ -79,20 +87,18 @@ export function PersonalizedDiscovery() {
                 )}
               </span>
               <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                {isPersonalized ? "Tailored Just For You" : "Customer Favorites"}
+                {badgeText}
               </span>
             </div>
             <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
-              {isPersonalized ? "Picked For You" : "Popular Picks For You"}
+              {titleText}
             </h2>
             <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
-              {isPersonalized
-                ? "Recommendations based on categories and styles you love"
-                : "Top customer-rated styles and footwear curated by our stylists"}
+              {subtitleText}
             </p>
           </div>
           <Link
-            href="/products?sort=rating"
+            href={viewAllLink}
             className="inline-flex items-center gap-1.5 text-sm font-bold text-black transition-colors hover:underline"
           >
             View more top picks <ArrowRight size={15} />
