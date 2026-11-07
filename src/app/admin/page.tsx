@@ -229,7 +229,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Secondary KPI Targets */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         <div className="rounded-lg border border-neutral-200 bg-white p-3.5 shadow-xs">
           <p className="text-[11px] font-semibold text-neutral-500">Cart-to-Order Conversion</p>
           <p className="text-base font-extrabold text-black mt-1">3.4%</p>

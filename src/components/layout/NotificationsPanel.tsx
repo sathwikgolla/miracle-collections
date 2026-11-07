@@ -20,7 +20,7 @@ export function NotificationsPanel() {
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="w-80 max-w-[90vw] overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg">
+    <div className="w-80 max-w-[calc(100vw-1.5rem)] sm:max-w-xs overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
         <div>
           <p className="text-sm font-bold text-black">Notifications</p>

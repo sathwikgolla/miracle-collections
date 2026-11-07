@@ -26,15 +26,15 @@ export function ProductQA({ product }: { product: Product }) {
   };
 
   return (
-    <div className="mt-6 rounded-lg border border-neutral-200">
-      <div className="flex items-center gap-2 border-b border-neutral-200 px-5 py-4">
+    <div className="mt-5 sm:mt-6 rounded-lg border border-neutral-200 overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-neutral-200 p-4 sm:px-5 sm:py-4">
         <HelpCircle size={18} />
-        <h3 className="text-base font-bold text-black">Questions & Answers</h3>
-        <span className="ml-auto text-sm text-neutral-400">({all.length})</span>
+        <h3 className="text-sm sm:text-base font-bold text-black">Questions & Answers</h3>
+        <span className="ml-auto text-xs sm:text-sm text-neutral-400">({all.length})</span>
       </div>
 
-      <form onSubmit={submit} className="border-b border-neutral-100 px-5 py-4">
-        <label className="mb-1.5 block text-sm font-medium text-black">
+      <form onSubmit={submit} className="border-b border-neutral-100 p-4 sm:px-5 sm:py-4">
+        <label className="mb-1.5 block text-xs sm:text-sm font-medium text-black">
           Ask a question
         </label>
         <div className="flex gap-2">
@@ -42,9 +42,9 @@ export function ProductQA({ product }: { product: Product }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={`Ask about ${product.name}...`}
-            className="h-11 w-full rounded-md border border-neutral-300 px-3 text-sm outline-none focus:border-black"
+            className="h-10 sm:h-11 w-full rounded-md border border-neutral-300 px-3 text-xs sm:text-sm outline-none focus:border-black"
           />
-          <Button type="submit" className="shrink-0" disabled={!text.trim()}>
+          <Button type="submit" size="sm" className="h-10 sm:h-11 shrink-0 px-4 text-xs sm:text-sm touch-manipulation" disabled={!text.trim()}>
             Post
           </Button>
         </div>
@@ -52,23 +52,23 @@ export function ProductQA({ product }: { product: Product }) {
 
       <div className="divide-y divide-neutral-100">
         {all.length === 0 && (
-          <p className="px-5 py-8 text-center text-sm text-neutral-500">No questions yet. Ask the first one!</p>
+          <p className="p-6 text-center text-sm text-neutral-500">No questions yet. Ask the first one!</p>
         )}
         {all.map((q) => (
-          <div key={q.id} className="px-5 py-4">
+          <div key={q.id} className="p-4 sm:px-5 sm:py-4">
             <div className="flex items-start gap-2.5">
               <MessageCircleQuestion size={16} className="mt-0.5 shrink-0 text-neutral-400" />
-              <div>
-                <p className="text-sm font-semibold text-black">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-semibold text-black">
                   Q: {q.question}
-                  <span className="ml-2 text-xs font-normal text-neutral-400">
-                    {q.author} · {q.date}
-                  </span>
+                </p>
+                <p className="mt-0.5 text-[11px] sm:text-xs font-normal text-neutral-400">
+                  {q.author} · {q.date}
                 </p>
                 {q.answer ? (
-                  <p className="mt-1.5 pl-4 text-sm text-neutral-600">A: {q.answer}</p>
+                  <p className="mt-1.5 border-l-2 border-neutral-200 pl-2.5 sm:pl-3 text-xs sm:text-sm text-neutral-600">A: {q.answer}</p>
                 ) : (
-                  <p className="mt-1.5 pl-4 text-xs text-neutral-400">Waiting for an answer...</p>
+                  <p className="mt-1.5 border-l-2 border-neutral-200 pl-2.5 sm:pl-3 text-xs text-neutral-400">Waiting for an answer...</p>
                 )}
               </div>
             </div>

@@ -249,7 +249,7 @@ export function PaymentVerifyModal({
         </div>
 
         {/* Modal Actions */}
-        <div className="flex items-center justify-between border-t border-neutral-100 bg-neutral-50 px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-4 sm:px-6 py-4">
           <div className="text-xs text-neutral-500">
             Status:{" "}
             <span className="font-bold capitalize text-amber-700">
@@ -257,7 +257,7 @@ export function PaymentVerifyModal({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
             {!canDecide ? (
               <span className="text-xs font-semibold text-neutral-500">
                 {payment.status === "verified"

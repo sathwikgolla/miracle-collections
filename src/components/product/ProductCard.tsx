@@ -91,6 +91,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
           {/* Top-right actions */}
           <div className="absolute right-2 top-2 flex flex-col gap-1.5">
             <button
+              suppressHydrationWarning
               onClick={handleWishlist}
               aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
               className={cn(
@@ -101,6 +102,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
               <Heart size={15} className={cn(wished && "fill-black")} />
             </button>
             <button
+              suppressHydrationWarning
               onClick={handleCompare}
               aria-label={compared ? "Remove from compare" : "Add to compare"}
               className={cn(
@@ -120,6 +122,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
 
           {/* Quick view on hover */}
           <button
+            suppressHydrationWarning
             onClick={(e) => {
               stop(e);
               setQuickView(true);
@@ -152,22 +155,24 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
           {showAddToCart && (
             product.stock === 0 ? (
               <button
+                suppressHydrationWarning
                 onClick={(e) => { stop(e); toggleNotify(product.id); }}
                 className={cn(
-                  "mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-black text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white",
+                  "mt-3 inline-flex h-9 w-full items-center justify-center gap-1 sm:gap-1.5 rounded-md border border-black px-2 text-[11px] sm:text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white",
                   notified && "bg-black text-white"
                 )}
               >
-                <Bell size={14} />
-                {notified ? "Notified ✓" : "Notify Me"}
+                <Bell size={13} className="shrink-0" />
+                <span className="truncate">{notified ? "Notified ✓" : "Notify Me"}</span>
               </button>
             ) : (
               <button
+                suppressHydrationWarning
                 onClick={handleAddToCart}
-                className="mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-black text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white"
+                className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1 sm:gap-1.5 rounded-md border border-black px-2 text-[11px] sm:text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white"
               >
-                <ShoppingCart size={14} />
-                Add to Cart
+                <ShoppingCart size={13} className="shrink-0" />
+                <span className="truncate">Add to Cart</span>
               </button>
             )
           )}

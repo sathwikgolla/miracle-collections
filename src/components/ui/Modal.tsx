@@ -38,7 +38,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       />
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl animate-slide-up",
+          "relative z-10 w-full max-w-lg rounded-t-2xl bg-white p-4 sm:p-6 shadow-2xl sm:rounded-2xl animate-slide-up max-h-[90vh] sm:max-h-[85vh] overflow-y-auto",
           className
         )}
         role="dialog"

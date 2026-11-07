@@ -117,7 +117,7 @@ export default function AdminReportsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-black hover:bg-neutral-100 transition shadow-sm"
@@ -161,7 +161,7 @@ export default function AdminReportsPage() {
       {/* Report 1: Sales & Revenue Audit */}
       {reportType === "sales" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
               <p className="text-[11px] text-neutral-500 font-medium">Gross Merchandise Value</p>
               <p className="text-xl font-bold text-black mt-1 font-mono">{formatPrice(grossSales)}</p>

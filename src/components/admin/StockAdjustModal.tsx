@@ -92,10 +92,10 @@ export function StockAdjustModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-2xl border border-neutral-200 bg-white shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-xs animate-fade-in">
+      <div className="relative w-full max-w-lg rounded-2xl border border-neutral-200 bg-white shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50 px-4 sm:px-6 py-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black text-white shadow-xs">
               <Warehouse className="h-5 w-5" />
@@ -114,7 +114,7 @@ export function StockAdjustModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
           {/* Product Selector */}
           <div className="space-y-1">
             <label className="font-semibold text-neutral-700">Select Product</label>

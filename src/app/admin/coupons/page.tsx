@@ -48,7 +48,7 @@ export default function AdminCouponsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={handleExportCsv}
             className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-black hover:bg-neutral-100 transition shadow-sm"
@@ -70,7 +70,7 @@ export default function AdminCouponsPage() {
       </div>
 
       {/* Coupon Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {coupons.map((c) => {
           const isExpired = new Date(c.expiryDate) < new Date();
 

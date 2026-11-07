@@ -146,6 +146,7 @@ export function Navbar() {
         <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Hamburger (mobile) */}
           <button
+            suppressHydrationWarning
             className="rounded-md p-2 text-black hover:bg-neutral-100 lg:hidden"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
@@ -180,7 +181,7 @@ export function Navbar() {
                 <NotificationBellIcon />
               </button>
               {notifOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 animate-fade-in">
+                <div className="absolute -right-16 xs:right-0 top-full z-50 mt-2 animate-fade-in max-w-[calc(100vw-1rem)]">
                   <NotificationsPanel />
                 </div>
               )}
@@ -200,6 +201,7 @@ export function Navbar() {
               {currentUser ? (
                 <>
                   <button
+                    suppressHydrationWarning
                     onClick={() => setUserOpen((o) => !o)}
                     className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold text-black hover:bg-neutral-100"
                   >
@@ -246,6 +248,7 @@ export function Navbar() {
                         <Settings size={15} /> Settings
                       </Link>
                       <button
+                        suppressHydrationWarning
                         onClick={logout}
                         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50"
                       >
@@ -327,18 +330,15 @@ export function Navbar() {
               canHover={canHover}
             />
           ))}
-          <Link
-            href="/videos"
-            className={cn(
-              "relative flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
-              pathname === "/videos"
-                ? "font-bold text-black after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-black"
-                : "text-neutral-600 hover:text-black"
-            )}
-          >
-            <YouTubeBadgeIcon />
-            <span>YouTube</span>
-          </Link>
+          {pathname === "/" && !user && (
+            <Link
+              href="/videos"
+              className="relative flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:text-black"
+            >
+              <YouTubeBadgeIcon />
+              <span></span>
+            </Link>
+          )}
         </nav>
       </div>
 
@@ -353,6 +353,7 @@ export function Navbar() {
             <div className="flex items-center justify-between border-b border-neutral-200 p-4">
               <Logo />
               <button
+                suppressHydrationWarning
                 onClick={() => setMenuOpen(false)}
                 aria-label="Close menu"
                 className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100"
@@ -389,6 +390,7 @@ export function Navbar() {
                 return (
                   <div key={c.id}>
                     <button
+                      suppressHydrationWarning
                       onClick={() => setExpandedCat(expanded ? null : c.id)}
                       aria-expanded={expanded}
                       className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50"
@@ -428,14 +430,16 @@ export function Navbar() {
                 );
               })}
 
-              <Link
-                href="/videos"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-black hover:bg-neutral-50"
-              >
-                <YouTubeBadgeIcon className="h-4 w-4" />
-                <span>YouTube Videos</span>
-              </Link>
+              {pathname === "/" && !user && (
+                <Link
+                  href="/videos"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-black hover:bg-neutral-50"
+                >
+                  <YouTubeBadgeIcon className="h-4 w-4" />
+                  <span>YouTube Videos</span>
+                </Link>
+              )}
 
               <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                 My account
@@ -474,6 +478,7 @@ export function Navbar() {
             <div className="border-t border-neutral-200 p-4">
               {currentUser ? (
                 <button
+                  suppressHydrationWarning
                   onClick={() => {
                     logout();
                     setMenuOpen(false);
@@ -592,6 +597,7 @@ function CategoryNavItem({
             <div className="my-1 border-t border-neutral-100" />
             {GENDER_OPTIONS.map((g) => (
               <button
+                suppressHydrationWarning
                 key={g.id}
                 onClick={() => go(g.id)}
                 className="group/item flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"

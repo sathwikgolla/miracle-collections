@@ -32,8 +32,8 @@ export function ProductGrid({ products, columns = 4 }: ProductGridProps) {
     <div
       className={
         columns === 4
-          ? "grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4"
-          : "grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4"
+          ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4 2xl:grid-cols-5"
+          : "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-4"
       }
     >
       {products.map((p) => (

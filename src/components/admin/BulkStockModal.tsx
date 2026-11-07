@@ -138,7 +138,7 @@ export function BulkStockModal({ onClose }: BulkStockModalProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
           {/* Step 1: Download current stock CSV */}
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
             <div>
               <p className="font-bold text-black">Step 1: Download Current Inventory CSV</p>
               <p className="text-neutral-500 text-[11px] mt-0.5">

@@ -21,16 +21,16 @@ export function TrackingTimeline({ status }: { status: Order["status"] }) {
     normalized === "Cancelled" ? -1 : STEPS.findIndex((s) => s.key === normalized);
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center min-w-0 overflow-x-auto no-scrollbar py-1">
       {STEPS.map((s, i) => {
         const reached = current >= i;
         const isCurrent = i === current;
         return (
-          <div key={s.label} className="flex flex-1 items-center last:flex-none">
+          <div key={s.label} className="flex flex-1 items-center last:flex-none min-w-[56px] sm:min-w-0">
             <div className="flex flex-col items-center">
               <span
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold",
+                  "flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold shrink-0",
                   reached
                     ? "border-black bg-black text-white"
                     : isCurrent
@@ -42,7 +42,7 @@ export function TrackingTimeline({ status }: { status: Order["status"] }) {
               </span>
               <span
                 className={cn(
-                  "mt-1.5 w-16 text-center text-[10px] font-medium leading-tight",
+                  "mt-1.5 w-14 sm:w-16 text-center text-[9px] sm:text-[10px] font-medium leading-tight",
                   reached || isCurrent ? "text-black" : "text-neutral-400"
                 )}
               >

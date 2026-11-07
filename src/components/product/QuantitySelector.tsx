@@ -28,8 +28,7 @@ export function QuantitySelector({
         className
       )}
     >
-      <button
-        onClick={() => onChange(Math.max(min, value - 1))}
+      <button suppressHydrationWarning onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         aria-label="Decrease quantity"
         className={cn(
@@ -47,8 +46,7 @@ export function QuantitySelector({
       >
         {value}
       </span>
-      <button
-        onClick={() => onChange(Math.min(max, value + 1))}
+      <button suppressHydrationWarning onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         aria-label="Increase quantity"
         className={cn(

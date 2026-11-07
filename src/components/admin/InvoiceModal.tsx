@@ -33,7 +33,7 @@ export function InvoiceModal({ order, onClose, defaultTab = "invoice" }: Invoice
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-xs animate-fade-in">
       <div className="relative w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
         {/* Modal Controls - Hidden during print */}
-        <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50 px-6 py-3.5 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 bg-neutral-50 px-3 sm:px-6 py-3 print:hidden">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTab("invoice")}

@@ -58,7 +58,7 @@ export function QuickBenefits({ items }: { items?: AdminQuickBenefitItem[] } = {
       {/* Reduced-size, sleek KPI Trust Strip matching compact presentation */}
       <div className="rounded-xl border border-neutral-200/90 bg-white p-2 shadow-2xs sm:p-2.5">
         {/* Mobile: Horizontal scrollable strip; Tablet/Desktop: Even row */}
-        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-5 sm:gap-2">
+        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 md:grid-cols-5 sm:gap-2">
           {displayBenefits.map((b) => {
             const Icon = (b.iconName && ICON_MAP[b.iconName]) || ShieldCheck;
             return (

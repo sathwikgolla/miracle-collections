@@ -323,6 +323,7 @@ export function HomeHero() {
         <div className="mt-2.5 flex items-center justify-center gap-1.5">
           {heroItems.map((_, idx) => (
             <button
+              suppressHydrationWarning
               key={idx}
               onClick={() => {
                 setCurrentIndex(idx);
@@ -422,6 +423,7 @@ export function HomeHero() {
                 <div className="flex gap-1.5">
                   {heroItems.map((_, idx) => (
                     <button
+                      suppressHydrationWarning
                       key={idx}
                       onClick={() => setCurrentIndex(idx)}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -433,6 +435,7 @@ export function HomeHero() {
                 </div>
                 <div className="ml-auto flex items-center gap-1.5">
                   <button
+                    suppressHydrationWarning
                     onClick={handlePrev}
                     aria-label="Previous product"
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-700 shadow-2xs transition-colors hover:border-black hover:text-black"
@@ -440,6 +443,7 @@ export function HomeHero() {
                     <ChevronLeft size={14} />
                   </button>
                   <button
+                    suppressHydrationWarning
                     onClick={handleNext}
                     aria-label="Next product"
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-700 shadow-2xs transition-colors hover:border-black hover:text-black"

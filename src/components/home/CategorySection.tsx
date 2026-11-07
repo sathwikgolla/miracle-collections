@@ -146,7 +146,7 @@ export function CategorySection({ categoryGroups }: { categoryGroups?: AdminCate
         - Mobile: Horizontal scroll with snap points and peek effect (per provided image).
         - Desktop/Tablet: Even multi-column grid.
       */}
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-5 lg:gap-3.5">
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 sm:overflow-visible sm:px-0 lg:gap-3.5">
         {displayGroups.map((group) => (
           <div
             key={group.id}

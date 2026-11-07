@@ -59,6 +59,7 @@ export function Button({
 
   return (
     <button
+      suppressHydrationWarning
       className={cn(baseClasses(variant, size, fullWidth), className)}
       {...props}
     >
